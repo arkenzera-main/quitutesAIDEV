@@ -5,7 +5,7 @@ apontar erros
 
 
 
-Checklist erros
+> Checklist erros
 
 Tela > dashboard
 Navegação da listagem cria paginação em branco(verificar se existem linhas null no banco ou erro no codigo)
@@ -13,4 +13,11 @@ Navegação da listagem cria paginação em branco(verificar se existem linhas n
 
 Tela > Estoque
 Navegação da listagem cria paginação em branco
+
+
+Tela tarefas
+
+
+Tela receitas
+
 
