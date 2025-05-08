@@ -20,4 +20,7 @@ Tela tarefas
 
 Tela receitas
 
+P2 - Erro ao cadastrar "CATEGORIA" de receita - https://github.com/arkenzera-main/quitutesAIDEV/blob/main/bugprint/ErroAoSalvarCategoria-Capturadetela2025-05-08-162422.png
+
+
 
