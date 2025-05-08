@@ -1,0 +1,16 @@
+Criar banco de dados
+executar aplicação
+verificar as tabelas
+apontar erros
+
+
+
+Checklist erros
+
+Tela > dashboard
+Navegação da listagem cria paginação em branco(verificar se existem linhas null no banco ou erro no codigo)
+
+
+Tela > Estoque
+Navegação da listagem cria paginação em branco
+
