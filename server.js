@@ -16,8 +16,24 @@ const dbConfig = {
 };
 
 // Enable CORS
-app.use(cors());
+
+app.use(cors({
+    origin: 'http://localhost:3000', // ou seu domínio
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true // se necessário
+}));
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    console.log('Headers:', req.headers);
+    console.log('Body:', req.body); // Agora deve mostrar o body corretamente
+    next();
+});
+
 
 // Serve static files from the same directory as server.js
 app.use(express.static(path.join(__dirname)));
@@ -321,8 +337,59 @@ async function initializeDatabase() {
     }
 }
 
-// ESTOQUE HTML 
+// ESTOQUE.HTML 
 // Add these endpoints to your server.js file
+
+/*
+CREATE TABLE `customers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `address` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `order_items` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `order_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `quantity` int(11) NOT NULL,
+  `unit_price` decimal(10,2) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `order_id` (`order_id`),
+  KEY `product_id` (`product_id`),
+  CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`),
+  CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `orders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `order_number` varchar(20) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `total_amount` decimal(10,2) NOT NULL,
+  `status` enum('pending','paid','preparing','on_delivery','delivered') DEFAULT 'pending',
+  `order_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `customer_id` (`customer_id`),
+  CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+CREATE TABLE `products` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `description` text DEFAULT NULL,
+  `current_stock` int(11) NOT NULL DEFAULT 0,
+  `minimum_stock` int(11) NOT NULL DEFAULT 5,
+  `unit` varchar(20) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+**/
 
 // Get all products with pagination and filters
 app.get('/api/products', async (req, res) => {
@@ -415,7 +482,7 @@ app.get('/api/products', async (req, res) => {
             counts: {
                 total: totalProducts[0].total_count,
                 low: lowStock[0].low_count,
-                out: outOfStock[0].out_count 
+                out: outOfStock[0].out_count
             }
         });
     } catch (error) {
@@ -515,16 +582,63 @@ app.get('/api/products/categories', async (req, res) => {
 // RECEITAS.HTML
 // Add these endpoints to your server.js file for recipes functionality
 
-        // Get all recipes with pagination and filters
-        app.get('/api/recipes', async (req, res) => {
-            try {
-                const { page = 1, limit = 9, category = '', search = '' } = req.query;
-                const offset = (page - 1) * limit;
+/*
+CREATE TABLE `recipe_ingredients` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `recipe_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `quantity` decimal(10,2) NOT NULL,
+  `unit` varchar(20) NOT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `recipe_id` (`recipe_id`),
+  KEY `product_id` (`product_id`),
+  CONSTRAINT `recipe_ingredients_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipes` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `recipe_ingredients_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
-                const connection = await pool.getConnection();
+CREATE TABLE `recipe_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `recipe_id` int(11) NOT NULL,
+  `action` enum('viewed','prepared','printed') NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `recipe_id` (`recipe_id`),
+  CONSTRAINT `recipe_log_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipes` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
-                // Base query
-                let query = `
+CREATE TABLE `recipes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `prep_time` int(11) NOT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `instructions` text NOT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+ **/
+
+
+
+
+
+
+
+
+// Get all recipes with pagination and filters
+app.get('/api/recipes', async (req, res) => {
+    try {
+        const { page = 1, limit = 9, category = '', search = '' } = req.query;
+        const offset = (page - 1) * limit;
+
+        const connection = await pool.getConnection();
+
+        // Base query
+        let query = `
                     SELECT r.id, r.name, r.category, r.prep_time, r.image_url, 
                            COUNT(ri.id) as ingredients_count,
                            SUM(CASE WHEN p.current_stock = 0 THEN 1 ELSE 0 END) as missing_ingredients
@@ -534,55 +648,55 @@ app.get('/api/products/categories', async (req, res) => {
                     WHERE 1=1
                 `;
 
-                // Add filters
-                const params = [];
+        // Add filters
+        const params = [];
 
-                if (category) {
-                    query += ' AND r.category = ?';
-                    params.push(category);
-                }
+        if (category) {
+            query += ' AND r.category = ?';
+            params.push(category);
+        }
 
-                if (search) {
-                    query += ' AND (r.name LIKE ? OR r.description LIKE ?)';
-                    params.push(`%${search}%`, `%${search}%`);
-                }
+        if (search) {
+            query += ' AND (r.name LIKE ? OR r.description LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`);
+        }
 
-                // Group and pagination
-                query += ' GROUP BY r.id ORDER BY r.name ASC LIMIT ? OFFSET ?';
-                params.push(parseInt(limit), parseInt(offset));
+        // Group and pagination
+        query += ' GROUP BY r.id ORDER BY r.name ASC LIMIT ? OFFSET ?';
+        params.push(parseInt(limit), parseInt(offset));
 
-                // Get recipes
-                const [recipes] = await connection.query(query, params);
+        // Get recipes
+        const [recipes] = await connection.query(query, params);
 
-                // Get total count for pagination
-                let countQuery = 'SELECT COUNT(*) as total FROM recipes r WHERE 1=1';
-                const countParams = [];
+        // Get total count for pagination
+        let countQuery = 'SELECT COUNT(*) as total FROM recipes r WHERE 1=1';
+        const countParams = [];
 
-                if (category) {
-                    countQuery += ' AND r.category = ?';
-                    countParams.push(category);
-                }
+        if (category) {
+            countQuery += ' AND r.category = ?';
+            countParams.push(category);
+        }
 
-                if (search) {
-                    countQuery += ' AND (r.name LIKE ? OR r.description LIKE ?)';
-                    countParams.push(`%${search}%`, `%${search}%`);
-                }
+        if (search) {
+            countQuery += ' AND (r.name LIKE ? OR r.description LIKE ?)';
+            countParams.push(`%${search}%`, `%${search}%`);
+        }
 
-                const [countResult] = await connection.query(countQuery, countParams);
+        const [countResult] = await connection.query(countQuery, countParams);
 
-                // Get categories for filter dropdown
-                const [categories] = await connection.query('SELECT DISTINCT category FROM recipes ORDER BY category');
+        // Get categories for filter dropdown
+        const [categories] = await connection.query('SELECT DISTINCT category FROM recipes ORDER BY category');
 
-                // Get recipe counts for summary cards
-                const [totalRecipes] = await connection.query('SELECT COUNT(*) as total FROM recipes');
-                const [popularRecipes] = await connection.query(`
+        // Get recipe counts for summary cards
+        const [totalRecipes] = await connection.query('SELECT COUNT(*) as total FROM recipes');
+        const [popularRecipes] = await connection.query(`
                     SELECT COUNT(*) as popular 
                     FROM recipes r
                     JOIN recipe_log l ON r.id = l.recipe_id
                     WHERE l.action = 'prepared' 
                     AND l.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
                 `);
-                const [missingIngredients] = await connection.query(`
+        const [missingIngredients] = await connection.query(`
                     SELECT COUNT(DISTINCT r.id) as missing
                     FROM recipes r
                     JOIN recipe_ingredients ri ON r.id = ri.recipe_id
@@ -590,42 +704,42 @@ app.get('/api/products/categories', async (req, res) => {
                     WHERE p.current_stock = 0
                 `);
 
-                connection.release();
+        connection.release();
 
-                res.json({
-                    recipes,
-                    total: countResult[0].total,
-                    page: parseInt(page),
-                    limit: parseInt(limit),
-                    categories,
-                    counts: {
-                        total: totalRecipes[0].total,
-                        popular: popularRecipes[0].popular,
-                        missing: missingIngredients[0].missing
-                    }
-                });
-            } catch (error) {
-                console.error(error);
-                res.status(500).json({ error: 'Database error' });
+        res.json({
+            recipes,
+            total: countResult[0].total,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            categories,
+            counts: {
+                total: totalRecipes[0].total,
+                popular: popularRecipes[0].popular,
+                missing: missingIngredients[0].missing
             }
         });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
-        // Get recipe details by ID
-        app.get('/api/recipes/:id', async (req, res) => {
-            try {
-                const recipeId = req.params.id;
-                const connection = await pool.getConnection();
+// Get recipe details by ID
+app.get('/api/recipes/:id', async (req, res) => {
+    try {
+        const recipeId = req.params.id;
+        const connection = await pool.getConnection();
 
-                // Get basic recipe info
-                const [recipe] = await connection.query('SELECT * FROM recipes WHERE id = ?', [recipeId]);
+        // Get basic recipe info
+        const [recipe] = await connection.query('SELECT * FROM recipes WHERE id = ?', [recipeId]);
 
-                if (recipe.length === 0) {
-                    connection.release();
-                    return res.status(404).json({ error: 'Recipe not found' });
-                }
+        if (recipe.length === 0) {
+            connection.release();
+            return res.status(404).json({ error: 'Recipe not found' });
+        }
 
-                // Get ingredients
-                const [ingredients] = await connection.query(`
+        // Get ingredients
+        const [ingredients] = await connection.query(`
                     SELECT ri.id, p.name, ri.quantity, ri.unit, ri.notes, 
                            CASE WHEN p.current_stock = 0 THEN 1 ELSE 0 END as missing
                     FROM recipe_ingredients ri
@@ -633,209 +747,490 @@ app.get('/api/products/categories', async (req, res) => {
                     WHERE ri.recipe_id = ?
                 `, [recipeId]);
 
-                connection.release();
+        connection.release();
 
-                res.json({
-                    ...recipe[0],
-                    ingredients
-                });
-            } catch (error) {
-                console.error(error);
-                res.status(500).json({ error: 'Database error' });
-            }
+        res.json({
+            ...recipe[0],
+            ingredients
         });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
-        // Add new recipe
-        app.post('/api/recipes', async (req, res) => {
-            try {
-                const { name, category, prep_time, image_url, instructions, notes, ingredients } = req.body;
-                const connection = await pool.getConnection();
+// Add new recipe
+app.post('/api/recipes', async (req, res) => {
+    try {
+        const { name, category, prep_time, image_url, instructions, notes, ingredients } = req.body;
+        const connection = await pool.getConnection();
 
-                // Start transaction
-                await connection.beginTransaction();
+        // Start transaction
+        await connection.beginTransaction();
 
-                // Insert recipe
-                const [recipeResult] = await connection.query(
-                    'INSERT INTO recipes (name, category, prep_time, image_url, instructions, notes) VALUES (?, ?, ?, ?, ?, ?)',
-                    [name, category, prep_time, image_url, instructions, notes]
-                );
+        // Insert recipe
+        const [recipeResult] = await connection.query(
+            'INSERT INTO recipes (name, category, prep_time, image_url, instructions, notes) VALUES (?, ?, ?, ?, ?, ?)',
+            [name, category, prep_time, image_url, instructions, notes]
+        );
 
-                const recipeId = recipeResult.insertId;
+        const recipeId = recipeResult.insertId;
 
-                // Insert ingredients
-                for (const ingredient of ingredients) {
-                    await connection.query(
-                        'INSERT INTO recipe_ingredients (recipe_id, product_id, quantity, unit, notes) VALUES (?, ?, ?, ?, ?)',
-                        [recipeId, ingredient.product_id, ingredient.quantity, ingredient.unit, ingredient.notes]
-                    );
-                }
+        // Insert ingredients
+        for (const ingredient of ingredients) {
+            await connection.query(
+                'INSERT INTO recipe_ingredients (recipe_id, product_id, quantity, unit, notes) VALUES (?, ?, ?, ?, ?)',
+                [recipeId, ingredient.product_id, ingredient.quantity, ingredient.unit, ingredient.notes]
+            );
+        }
 
-                // Commit transaction
-                await connection.commit();
-                connection.release();
+        // Commit transaction
+        await connection.commit();
+        connection.release();
 
-                res.json({
-                    success: true,
-                    recipeId
-                });
-            } catch (error) {
-                console.error(error);
-                if (connection) {
-                    await connection.rollback();
-                    connection.release();
-                }
-                res.status(500).json({ error: 'Database error' });
-            }
+        res.json({
+            success: true,
+            recipeId
         });
+    } catch (error) {
+        console.error(error);
+        if (connection) {
+            await connection.rollback();
+            connection.release();
+        }
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// Update recipe
+app.put('/api/recipes/:id', async (req, res) => {
+    try {
+        const recipeId = req.params.id;
+        const { name, category, prep_time, image_url, instructions, notes, ingredients } = req.body;
+        const connection = await pool.getConnection();
+
+        // Start transaction
+        await connection.beginTransaction();
 
         // Update recipe
-        app.put('/api/recipes/:id', async (req, res) => {
-            try {
-                const recipeId = req.params.id;
-                const { name, category, prep_time, image_url, instructions, notes, ingredients } = req.body;
-                const connection = await pool.getConnection();
-
-                // Start transaction
-                await connection.beginTransaction();
-
-                // Update recipe
-                await connection.query(
-                    'UPDATE recipes SET name = ?, category = ?, prep_time = ?, image_url = ?, instructions = ?, notes = ? WHERE id = ?',
-                    [name, category, prep_time, image_url, instructions, notes, recipeId]
-                );
-
-                // Delete existing ingredients
-                await connection.query('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [recipeId]);
-
-                // Insert new ingredients
-                for (const ingredient of ingredients) {
-                    await connection.query(
-                        'INSERT INTO recipe_ingredients (recipe_id, product_id, quantity, unit, notes) VALUES (?, ?, ?, ?, ?)',
-                        [recipeId, ingredient.product_id, ingredient.quantity, ingredient.unit, ingredient.notes]
-                    );
-                }
-
-                // Commit transaction
-                await connection.commit();
-                connection.release();
-
-                res.json({ success: true });
-            } catch (error) {
-                console.error(error);
-                if (connection) {
-                    await connection.rollback();
-                    connection.release();
-                }
-                res.status(500).json({ error: 'Database error' });
-            }
-        });
-
-        // Delete recipe
-        app.delete('/api/recipes/:id', async (req, res) => {
-            try {
-                const recipeId = req.params.id;
-                const connection = await pool.getConnection();
-
-                // Start transaction
-                await connection.beginTransaction();
-
-                // Delete ingredients first
-                await connection.query('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [recipeId]);
-
-                // Then delete recipe
-                await connection.query('DELETE FROM recipes WHERE id = ?', [recipeId]);
-
-                // Commit transaction
-                await connection.commit();
-                connection.release();
-
-                res.json({ success: true });
-            } catch (error) {
-                console.error(error);
-                if (connection) {
-                    await connection.rollback();
-                    connection.release();
-                }
-                res.status(500).json({ error: 'Database error' });
-            }
-        });
-
-        // Get all products for ingredient selection
-        app.get('/api/products/select', async (req, res) => {
-            try {
-                const connection = await pool.getConnection();
-                const [products] = await connection.query(
-                    'SELECT id, name, category, unit FROM products ORDER BY name'
-                );
-                connection.release();
-                res.json(products);
-            } catch (error) {
-                console.error(error);
-                res.status(500).json({ error: 'Database error' });
-            }
-        });
-
-        // Log recipe actions (prepared, viewed, etc.)
-        app.post('/api/recipes/:id/log', async (req, res) => {
-            try {
-                const recipeId = req.params.id;
-                const { action } = req.body;
-                const connection = await pool.getConnection();
-
-                await connection.query(
-                    'INSERT INTO recipe_log (recipe_id, action) VALUES (?, ?)',
-                    [recipeId, action]
-                );
-
-                connection.release();
-                res.json({ success: true });
-            } catch (error) {
-                console.error(error);
-                res.status(500).json({ error: 'Database error' });
-            }
-        });
-
-        // Tables necessárias para essa tela
-        /*
-        CREATE TABLE IF NOT EXISTS recipes (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            category VARCHAR(50) NOT NULL,
-            prep_time INT NOT NULL,
-            image_url VARCHAR(255),
-            instructions TEXT NOT NULL,
-            notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        await connection.query(
+            'UPDATE recipes SET name = ?, category = ?, prep_time = ?, image_url = ?, instructions = ?, notes = ? WHERE id = ?',
+            [name, category, prep_time, image_url, instructions, notes, recipeId]
         );
 
-        CREATE TABLE IF NOT EXISTS recipe_ingredients (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            recipe_id INT NOT NULL,
-            product_id INT NOT NULL,
-            quantity DECIMAL(10,2) NOT NULL,
-            unit VARCHAR(20) NOT NULL,
-            notes TEXT,
-            FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
-            FOREIGN KEY (product_id) REFERENCES products(id),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        // Delete existing ingredients
+        await connection.query('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [recipeId]);
+
+        // Insert new ingredients
+        for (const ingredient of ingredients) {
+            await connection.query(
+                'INSERT INTO recipe_ingredients (recipe_id, product_id, quantity, unit, notes) VALUES (?, ?, ?, ?, ?)',
+                [recipeId, ingredient.product_id, ingredient.quantity, ingredient.unit, ingredient.notes]
+            );
+        }
+
+        // Commit transaction
+        await connection.commit();
+        connection.release();
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        if (connection) {
+            await connection.rollback();
+            connection.release();
+        }
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// Delete recipe
+app.delete('/api/recipes/:id', async (req, res) => {
+    try {
+        const recipeId = req.params.id;
+        const connection = await pool.getConnection();
+
+        // Start transaction
+        await connection.beginTransaction();
+
+        // Delete ingredients first
+        await connection.query('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [recipeId]);
+
+        // Then delete recipe
+        await connection.query('DELETE FROM recipes WHERE id = ?', [recipeId]);
+
+        // Commit transaction
+        await connection.commit();
+        connection.release();
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        if (connection) {
+            await connection.rollback();
+            connection.release();
+        }
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// Get all products for ingredient selection
+app.get('/api/products/select', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [products] = await connection.query(
+            'SELECT id, name, category, unit FROM products ORDER BY name'
+        );
+        connection.release();
+        res.json(products);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// Log recipe actions (prepared, viewed, etc.)
+app.post('/api/recipes/:id/log', async (req, res) => {
+    try {
+        const recipeId = req.params.id;
+        const { action } = req.body;
+        const connection = await pool.getConnection();
+
+        await connection.query(
+            'INSERT INTO recipe_log (recipe_id, action) VALUES (?, ?)',
+            [recipeId, action]
         );
 
-        CREATE TABLE IF NOT EXISTS recipe_log (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            recipe_id INT NOT NULL,
-            action ENUM('viewed', 'prepared', 'printed') NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// Tables necessárias para essa tela
+/*
+CREATE TABLE IF NOT EXISTS recipes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    prep_time INT NOT NULL,
+    image_url VARCHAR(255),
+    instructions TEXT NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS recipe_ingredients (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recipe_id INT NOT NULL,
+    product_id INT NOT NULL,
+    quantity DECIMAL(10,2) NOT NULL,
+    unit VARCHAR(20) NOT NULL,
+    notes TEXT,
+    FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
+    FOREIGN KEY (product_id) REFERENCES products(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS recipe_log (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recipe_id INT NOT NULL,
+    action ENUM('viewed', 'prepared', 'printed') NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE
+);
+*/
+
+
+// SERVER.JS - TAREFAS.HTML ----------------------------------------------------------------------------------------------------------------------------------------
+// Tables usadas para o tarefas.html
+/*
+CREATE TABLE IF NOT EXISTS task_categories (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(50) NOT NULL,
+                color VARCHAR(20) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE IF NOT EXISTS tasks (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                description TEXT,
+                due_date DATETIME NOT NULL,
+                priority ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
+                status ENUM('pending', 'in_progress', 'completed') NOT NULL DEFAULT 'pending',
+                category_id INT,
+                reminder_minutes INT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES task_categories(id) ON DELETE SET NULL
+);
+
+
+
+**/
+
+
+// Add to your existing server.js
+
+// Add these endpoints after your existing routes:
+
+// Task Endpoints
+app.get('/api/tasks', async (req, res) => {
+    console.log('Query parameters:', req.query);
+    try {
+        const { search, filter, sort, page = 1, limit = 10 } = req.query;
+        const offset = (page - 1) * limit;
+        const connection = await pool.getConnection();
+
+        let query = `
+            SELECT t.*, tc.name AS category_name, tc.color AS category_color 
+            FROM tasks t
+            LEFT JOIN task_categories tc ON t.category_id = tc.id
+            WHERE 1=1
+        `;
+        let params = [];
+        let countQuery = 'SELECT COUNT(*) AS total FROM tasks t WHERE 1=1';
+        let countParams = [];
+
+        // Search filter
+        if (search) {
+            query += ' AND (t.title LIKE ? OR t.description LIKE ?)';
+            params.push(`%${search}%`, `%${search}%`);
+            countQuery += ' AND (t.title LIKE ? OR t.description LIKE ?)';
+            countParams.push(`%${search}%`, `%${search}%`);
+        }
+
+        // Status filter
+        if (filter && filter !== 'all') {
+            if (filter === 'overdue') {
+                query += ' AND t.due_date < NOW() AND t.status != "completed"';
+                countQuery += ' AND t.due_date < NOW() AND t.status != "completed"';
+            } else {
+                query += ' AND t.status = ?';
+                params.push(filter);
+                countQuery += ' AND t.status = ?';
+                countParams.push(filter);
+            }
+        }
+
+        // Sorting
+        switch (sort) {
+            case 'due_date_asc':
+                query += ' ORDER BY t.due_date ASC';
+                break;
+            case 'due_date_desc':
+                query += ' ORDER BY t.due_date DESC';
+                break;
+            case 'priority_asc':
+                query += ' ORDER BY FIELD(t.priority, "high", "medium", "low")';
+                break;
+            case 'priority_desc':
+                query += ' ORDER BY FIELD(t.priority, "low", "medium", "high")';
+                break;
+            default:
+                query += ' ORDER BY t.due_date ASC';
+        }
+
+        // Pagination
+        query += ' LIMIT ? OFFSET ?';
+        params.push(parseInt(limit), parseInt(offset));
+
+        // Execute queries
+        const [tasks] = await connection.query(query, params);
+        const [countResult] = await connection.query(countQuery, countParams);
+        // Formata as datas para ISO string
+        const formattedTasks = tasks.map(task => ({
+            ...task,
+            due_date: task.due_date ? new Date(task.due_date).toISOString() : null
+        }));
+
+        connection.release();
+
+        res.json({
+            tasks: formattedTasks,
+            total: countResult[0].total,
+            page: parseInt(page),
+            limit: parseInt(limit)
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+app.post('/api/tasks', async (req, res) => {
+    console.log('Recebendo requisição POST /api/tasks');
+    console.log('Headers:', req.headers)
+    console.log('Corpo da requisição:', req.body);
+    try {
+        const { title, description, due_date, priority, status, category_id, reminder_minutes } = req.body;
+
+        // Validação mais robusta
+        if (!title || !due_date || !priority || !status) {
+            console.log('Dados inválidos recebidos:', req.body);
+            return res.status(400).json({
+                success: false,
+                error: "Dados incompletos",
+                received: req.body
+            });
+        }
+        const connection = await pool.getConnection();
+
+        // Debug para crud create da task
+        console.log('Inserindo no banco de dados:', {
+            title, description, due_date, priority, status, 
+            category_id, reminder_minutes
+        });
+
+
+        const [result] = await connection.query(
+            `INSERT INTO tasks 
+            (title, description, due_date, priority, status, category_id, reminder_minutes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [title, description || null, due_date, priority, status, category_id || null, reminder_minutes || null]
         );
-        */
+
+        // Debug para verificar o ID da tarefa inserida
+        console.log('Tarefa inserida, ID:', result.insertId);
+        
+
+        // Recupera a tarefa com JOIN para incluir dados da categoria
+        const [task] = await connection.query(`
+            SELECT t.*, tc.name AS category_name, tc.color AS category_color 
+            FROM tasks t
+            LEFT JOIN task_categories tc ON t.category_id = tc.id
+            WHERE t.id = ?
+        `, [result.insertId]);
+
+        connection.release();
+
+        // Debug para verificar a tarefa recuperada
+        console.log('Tarefa recuperada:', task[0]);
+
+        res.json({
+            success: true,
+            task: task[0],  // Retorna a tarefa completa,
+            message: "Tarefa criada com sucesso"
+        });
+    } catch (error) {
+        console.error("Erro ao criar tarefa:", error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao criar tarefa',
+            details: error.message,
+            stack: error.stack
+        });
+    }
+});
+
+app.put('/api/tasks/:id', async (req, res) => {
+    try {
+        const taskId = req.params.id;
+        const { title, description, due_date, priority, status, category_id, reminder_minutes } = req.body;
+        const connection = await pool.getConnection();
+
+        await connection.query(
+            `UPDATE tasks SET
+            title = ?, description = ?, due_date = ?, priority = ?,
+            status = ?, category_id = ?, reminder_minutes = ?
+            WHERE id = ?`,
+            [title, description, due_date, priority, status,
+                category_id || null, reminder_minutes, taskId]
+        );
+
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+app.delete('/api/tasks/:id', async (req, res) => {
+    try {
+        const taskId = req.params.id;
+        const connection = await pool.getConnection();
+
+        await connection.query('DELETE FROM tasks WHERE id = ?', [taskId]);
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// Task Categories Endpoints
+app.get('/api/categories', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [categories] = await connection.query('SELECT * FROM task_categories');
+        connection.release();
+        res.json(categories);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao buscar categorias' });
+    }
+});
+
+app.post('/api/categories', async (req, res) => {
+    try {
+        const { name, color } = req.body;
+
+        if (!name || !color) {
+            return res.status(400).json({ error: "Nome e cor são obrigatórios" });
+        }
+
+        const connection = await pool.getConnection();
+
+        const [result] = await connection.query(
+            'INSERT INTO task_categories (name, color) VALUES (?, ?)',
+            [name, color]
+        );
+
+        connection.release();
+        res.json({
+            success: true,
+            categoryId: result.insertId,
+            message: "Categoria criada com sucesso"
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao criar categoria' });
+    }
+});
+
+// Task Statistics Endpoint
+app.get('/api/tasks/summary', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        const [total] = await connection.query('SELECT COUNT(*) AS total FROM tasks');
+        const [completed] = await connection.query('SELECT COUNT(*) AS completed FROM tasks WHERE status = "completed"');
+        const [pending] = await connection.query('SELECT COUNT(*) AS pending FROM tasks WHERE status != "completed"');
+        const [overdue] = await connection.query('SELECT COUNT(*) AS overdue FROM tasks WHERE due_date < NOW() AND status != "completed"');
+
+        connection.release();
+        res.json({
+            total: total[0].total,
+            completed: completed[0].completed,
+            pending: pending[0].pending,
+            overdue: overdue[0].overdue
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
 
 
-
-
-
-
+// END TAREFAS .HTML ----------------------------------------------------------------------------------------------------------------------------------------
 
 
 
