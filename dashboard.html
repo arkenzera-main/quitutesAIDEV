@@ -11,37 +11,47 @@
         .sidebar {
             transition: all 0.3s;
         }
+
         .sidebar.collapsed {
             width: 80px;
         }
+
         .sidebar.collapsed .nav-text {
             display: none;
         }
+
         .sidebar.collapsed .logo-text {
             display: none;
         }
+
         .sidebar.collapsed .nav-item {
             justify-content: center;
         }
+
         .main-content {
             transition: all 0.3s;
         }
+
         .sidebar.collapsed+.main-content {
             margin-left: 80px;
         }
+
         .chart-container {
             position: relative;
             height: 300px;
             width: 100%;
         }
+
         .notification {
             animation: slideIn 0.3s ease-out;
         }
+
         @keyframes slideIn {
             from {
                 opacity: 0;
                 transform: translateX(20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
@@ -67,39 +77,63 @@
                 <nav>
                     <ul class="space-y-2">
                         <li>
-                            <a href="/" class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                            <a href="/dashboard.html" class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
                                 <i class="fas fa-tachometer-alt mr-3"></i>
                                 <span class="nav-text">Dashboard</span>
                             </a>
                         </li>
                         <li>
-                            <a href="/estoque.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="/estoque.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-box-open mr-3"></i>
                                 <span class="nav-text">Estoque</span>
                             </a>
                         </li>
                         <li>
-                            <a href="/receitas.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="/receitas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-utensils mr-3"></i>
                                 <span class="nav-text">Receitas</span>
                             </a>
                         </li>
                         <li>
-                            <a href="/tarefas.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800">
+                            <a href="/tarefas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800">
                                 <i class="fas fa-tasks mr-3"></i>
                                 <span class="nav-text">Tarefas</span>
                             </a>
                         </li>
                         <li>
-                            <a href="/financas" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="/financas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-money-bill-wave mr-3"></i>
                                 <span class="nav-text">Finanças</span>
                             </a>
                         </li>
                         <li>
-                            <a href="/vendas" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="/vendas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-shopping-cart mr-3"></i>
                                 <span class="nav-text">Vendas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="relatorios.html" class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-chart-bar mr-3"></i>
+                                <span class="nav-text">Relatórios</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="sustentabilidade.html"
+                                class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-leaf mr-3"></i>
+                                <span class="nav-text">Sustentabilidade</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="config.html" class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-cog mr-3"></i>
+                                <span class="nav-text">Configurações</span>
                             </a>
                         </li>
                     </ul>
@@ -155,9 +189,13 @@
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-lg font-semibold text-gray-800">Vendas Semanais</h2>
                             <div class="flex space-x-2">
-                                <button class="sales-period-btn px-3 py-1 text-sm border rounded-lg bg-indigo-50 text-indigo-600" data-period="week">Semana</button>
-                                <button class="sales-period-btn px-3 py-1 text-sm border rounded-lg hover:bg-gray-50" data-period="month">Mês</button>
-                                <button class="sales-period-btn px-3 py-1 text-sm border rounded-lg hover:bg-gray-50" data-period="year">Ano</button>
+                                <button
+                                    class="sales-period-btn px-3 py-1 text-sm border rounded-lg bg-indigo-50 text-indigo-600"
+                                    data-period="week">Semana</button>
+                                <button class="sales-period-btn px-3 py-1 text-sm border rounded-lg hover:bg-gray-50"
+                                    data-period="month">Mês</button>
+                                <button class="sales-period-btn px-3 py-1 text-sm border rounded-lg hover:bg-gray-50"
+                                    data-period="year">Ano</button>
                             </div>
                         </div>
                         <div class="chart-container">
@@ -169,7 +207,8 @@
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-lg font-semibold text-gray-800">Produtos Mais Vendidos</h2>
-                            <button id="filter-products" class="px-3 py-1 text-sm border rounded-lg bg-indigo-50 text-indigo-600 flex items-center">
+                            <button id="filter-products"
+                                class="px-3 py-1 text-sm border rounded-lg bg-indigo-50 text-indigo-600 flex items-center">
                                 <i class="fas fa-filter mr-1"></i>
                                 <span>Filtrar</span>
                             </button>
@@ -184,7 +223,8 @@
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
                     <div class="p-4 border-b flex justify-between items-center">
                         <h2 class="text-lg font-semibold text-gray-800">Pedidos Recentes</h2>
-                        <button id="view-all-orders" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center">
+                        <button id="view-all-orders"
+                            class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center">
                             <span>Ver Todos</span>
                             <i class="fas fa-chevron-right ml-1"></i>
                         </button>
@@ -194,12 +234,24 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pedido #</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Itens</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Pedido #</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Cliente</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Itens</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Valor</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Data</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200" id="recent-orders">
@@ -211,11 +263,13 @@
                     <div class="p-4 border-t flex items-center justify-between text-sm text-gray-600">
                         <div id="orders-count">Carregando pedidos...</div>
                         <div class="flex space-x-2">
-                            <button id="prev-page" class="px-3 py-1 border rounded hover:bg-gray-50"><i class="fas fa-chevron-left"></i></button>
+                            <button id="prev-page" class="px-3 py-1 border rounded hover:bg-gray-50"><i
+                                    class="fas fa-chevron-left"></i></button>
                             <button id="page-1" class="px-3 py-1 border rounded bg-indigo-600 text-white">1</button>
                             <button id="page-2" class="px-3 py-1 border rounded hover:bg-gray-50">2</button>
                             <button id="page-3" class="px-3 py-1 border rounded hover:bg-gray-50">3</button>
-                            <button id="next-page" class="px-3 py-1 border rounded hover:bg-gray-50"><i class="fas fa-chevron-right"></i></button>
+                            <button id="next-page" class="px-3 py-1 border rounded hover:bg-gray-50"><i
+                                    class="fas fa-chevron-right"></i></button>
                         </div>
                     </div>
                 </div>
@@ -224,7 +278,8 @@
                 <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                     <div class="p-4 border-b flex justify-between items-center">
                         <h2 class="text-lg font-semibold text-gray-800">Produtos com Estoque Baixo</h2>
-                        <button id="view-full-stock" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center">
+                        <button id="view-full-stock"
+                            class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center">
                             <span>Ver Estoque Completo</span>
                             <i class="fas fa-chevron-right ml-1"></i>
                         </button>
@@ -234,11 +289,21 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estoque Atual</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estoque Mínimo</th>
-                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ação</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Produto</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Categoria</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Estoque Atual</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Estoque Mínimo</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Ação</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200" id="low-stock-products">
@@ -253,7 +318,7 @@
 
     <!-- Server Setup Instructions -->
     <script type="text/template" id="server-setup">
-        
+
     </script>
 
     <!-- Client-side JavaScript -->
@@ -282,19 +347,19 @@
         const ordersPerPage = 4;
 
         // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             loadDashboardSummary();
             loadSalesData(currentSalesPeriod);
             loadTopProducts();
             loadRecentOrders(currentPage);
             loadLowStockProducts();
-            
+
             // Set up event listeners
             document.querySelectorAll('.sales-period-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', function () {
                     currentSalesPeriod = this.dataset.period;
                     loadSalesData(currentSalesPeriod);
-                    
+
                     // Update active button
                     document.querySelectorAll('.sales-period-btn').forEach(b => {
                         b.classList.remove('bg-indigo-50', 'text-indigo-600');
@@ -304,44 +369,44 @@
                     this.classList.remove('hover:bg-gray-50');
                 });
             });
-            
-            document.getElementById('view-all-orders').addEventListener('click', function() {
+
+            document.getElementById('view-all-orders').addEventListener('click', function () {
                 window.location.href = '/vendas';
             });
-            
-            document.getElementById('view-full-stock').addEventListener('click', function() {
+
+            document.getElementById('view-full-stock').addEventListener('click', function () {
                 window.location.href = '/estoque';
             });
-            
-            document.getElementById('filter-products').addEventListener('click', function() {
+
+            document.getElementById('filter-products').addEventListener('click', function () {
                 // In a real app, this would open a filter modal
                 showNotification('Filtrar produtos por período', 'info');
             });
-            
+
             // Pagination controls
-            document.getElementById('prev-page').addEventListener('click', function() {
+            document.getElementById('prev-page').addEventListener('click', function () {
                 if (currentPage > 1) {
                     currentPage--;
                     loadRecentOrders(currentPage);
                 }
             });
-            
-            document.getElementById('next-page').addEventListener('click', function() {
+
+            document.getElementById('next-page').addEventListener('click', function () {
                 currentPage++;
                 loadRecentOrders(currentPage);
             });
-            
-            document.getElementById('page-1').addEventListener('click', function() {
+
+            document.getElementById('page-1').addEventListener('click', function () {
                 currentPage = 1;
                 loadRecentOrders(currentPage);
             });
-            
-            document.getElementById('page-2').addEventListener('click', function() {
+
+            document.getElementById('page-2').addEventListener('click', function () {
                 currentPage = 2;
                 loadRecentOrders(currentPage);
             });
-            
-            document.getElementById('page-3').addEventListener('click', function() {
+
+            document.getElementById('page-3').addEventListener('click', function () {
                 currentPage = 3;
                 loadRecentOrders(currentPage);
             });
@@ -352,10 +417,10 @@
             try {
                 const response = await fetch('/api/dashboard/summary');
                 const data = await response.json();
-                
+
                 // Update notification count with low stock products
                 document.getElementById('notification-count').textContent = data.lowStockProducts;
-                
+
                 // Create summary cards
                 const summaryCards = [
                     {
@@ -395,10 +460,10 @@
                         changeColor: 'text-blue-500'
                     }
                 ];
-                
+
                 const cardsContainer = document.getElementById('summary-cards');
                 cardsContainer.innerHTML = '';
-                
+
                 summaryCards.forEach(card => {
                     const cardElement = document.createElement('div');
                     cardElement.className = 'bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition';
@@ -419,7 +484,7 @@
                     `;
                     cardsContainer.appendChild(cardElement);
                 });
-                
+
             } catch (error) {
                 console.error('Error loading dashboard summary:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
@@ -431,14 +496,14 @@
             try {
                 const response = await fetch(`/api/dashboard/sales-data/${period}`);
                 const data = await response.json();
-                
+
                 // Prepare chart data based on period
                 let labels, values;
-                
+
                 if (period === 'week') {
                     labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
                     values = Array(7).fill(0);
-                    
+
                     data.forEach(item => {
                         const dayIndex = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
                             .indexOf(item.day);
@@ -450,10 +515,10 @@
                     // Get number of days in current month
                     const now = new Date();
                     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-                    
-                    labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+
+                    labels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
                     values = Array(daysInMonth).fill(0);
-                    
+
                     data.forEach(item => {
                         if (item.day >= 1 && item.day <= daysInMonth) {
                             values[item.day - 1] = item.total;
@@ -462,20 +527,20 @@
                 } else { // year
                     labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
                     values = Array(12).fill(0);
-                    
+
                     data.forEach(item => {
-                        const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June', 
-                                           'July', 'August', 'September', 'October', 'November', 'December']
+                        const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December']
                             .indexOf(item.month);
                         if (monthIndex !== -1) {
                             values[monthIndex] = item.total;
                         }
                     });
                 }
-                
+
                 // Create or update chart
                 const ctx = document.getElementById('salesChart').getContext('2d');
-                
+
                 if (salesChart) {
                     salesChart.data.labels = labels;
                     salesChart.data.datasets[0].data = values;
@@ -519,7 +584,7 @@
                         }
                     });
                 }
-                
+
             } catch (error) {
                 console.error('Error loading sales data:', error);
                 showNotification('Erro ao carregar dados de vendas', 'error');
@@ -531,14 +596,14 @@
             try {
                 const response = await fetch('/api/dashboard/top-products');
                 const data = await response.json();
-                
+
                 // Prepare data for chart
                 const labels = data.map(item => item.name);
                 const values = data.map(item => item.sales_count);
-                
+
                 // Create or update chart
                 const ctx = document.getElementById('productsChart').getContext('2d');
-                
+
                 if (productsChart) {
                     productsChart.data.labels = labels;
                     productsChart.data.datasets[0].data = values;
@@ -592,7 +657,7 @@
                         }
                     });
                 }
-                
+
             } catch (error) {
                 console.error('Error loading top products:', error);
                 showNotification('Erro ao carregar produtos mais vendidos', 'error');
@@ -604,11 +669,11 @@
             try {
                 const response = await fetch(`/api/dashboard/recent-orders?page=${page}&limit=${ordersPerPage}`);
                 const data = await response.json();
-                
+
                 // Update orders table
                 const ordersContainer = document.getElementById('recent-orders');
                 ordersContainer.innerHTML = '';
-                
+
                 data.orders.forEach(order => {
                     const statusClasses = {
                         'pending': 'bg-gray-100 text-gray-800',
@@ -617,7 +682,7 @@
                         'on_delivery': 'bg-blue-100 text-blue-800',
                         'delivered': 'bg-green-100 text-green-800'
                     };
-                    
+
                     const statusText = {
                         'pending': 'Pendente',
                         'paid': 'Pago',
@@ -625,7 +690,7 @@
                         'on_delivery': 'A caminho',
                         'delivered': 'Entregue'
                     };
-                    
+
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-gray-50 transition';
                     row.innerHTML = `
@@ -649,15 +714,15 @@
                     `;
                     ordersContainer.appendChild(row);
                 });
-                
+
                 // Update pagination info
-                document.getElementById('orders-count').textContent = 
+                document.getElementById('orders-count').textContent =
                     `Mostrando ${((page - 1) * ordersPerPage) + 1} a ${Math.min(page * ordersPerPage, data.total)} de ${data.total} pedidos`;
-                
+
                 // Update pagination buttons
                 document.getElementById('prev-page').disabled = page === 1;
                 document.getElementById('next-page').disabled = page * ordersPerPage >= data.total;
-                
+
                 // Update page buttons
                 document.getElementById('page-1').classList.toggle('bg-indigo-600', page === 1);
                 document.getElementById('page-1').classList.toggle('text-white', page === 1);
@@ -665,7 +730,7 @@
                 document.getElementById('page-2').classList.toggle('text-white', page === 2);
                 document.getElementById('page-3').classList.toggle('bg-indigo-600', page === 3);
                 document.getElementById('page-3').classList.toggle('text-white', page === 3);
-                
+
             } catch (error) {
                 console.error('Error loading recent orders:', error);
                 showNotification('Erro ao carregar pedidos recentes', 'error');
@@ -677,11 +742,11 @@
             try {
                 const response = await fetch('/api/dashboard/low-stock');
                 const data = await response.json();
-                
+
                 // Update products table
                 const productsContainer = document.getElementById('low-stock-products');
                 productsContainer.innerHTML = '';
-                
+
                 data.forEach(product => {
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-gray-50 transition';
@@ -706,7 +771,7 @@
                     `;
                     productsContainer.appendChild(row);
                 });
-                
+
             } catch (error) {
                 console.error('Error loading low stock products:', error);
                 showNotification('Erro ao carregar produtos com estoque baixo', 'error');
@@ -721,14 +786,14 @@
                 info: 'bg-blue-500',
                 warning: 'bg-yellow-500'
             };
-            
+
             const icons = {
                 success: 'fa-check-circle',
                 error: 'fa-exclamation-circle',
                 info: 'fa-info-circle',
                 warning: 'fa-exclamation-triangle'
             };
-            
+
             const notification = document.createElement('div');
             notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white flex items-center notification ${colors[type]}`;
             notification.innerHTML = `
@@ -745,4 +810,5 @@
         }
     </script>
 </body>
+
 </html>

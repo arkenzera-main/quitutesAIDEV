@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanças - Quitutes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .sidebar {
+            transition: all 0.3s;
+        }
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        .sidebar.collapsed .nav-text {
+            display: none;
+        }
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+        }
+        .main-content {
+            transition: all 0.3s;
+        }
+        .sidebar.collapsed + .main-content {
+            margin-left: 80px;
+        }
+        .popup {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -45%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+        .overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .positive-value {
+            color: #10b981;
+        }
+        .negative-value {
+            color: #ef4444;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar bg-indigo-700 text-white w-64 flex flex-col fixed h-full">
+            <a href="index.html">
+                <div class="p-4 flex items-center space-x-3 border-b border-indigo-600">
+                    <div class="bg-white p-2 rounded-lg">
+                        <i class="fas fa-cookie-bite text-indigo-700 text-xl"></i>
+                    </div>
+                    <span class="logo-text font-bold text-xl">Quitutes</span>
+                </div>
+            </a>
+
+            <div class="p-4 flex-1 overflow-y-auto">
+                <nav>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="dashboard.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-tachometer-alt mr-3"></i>
+                                <span class="nav-text">Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="estoque.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-box-open mr-3"></i>
+                                <span class="nav-text">Estoque</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="receitas.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-utensils mr-3"></i>
+                                <span class="nav-text">Receitas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="tarefas.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-tasks mr-3"></i>
+                                <span class="nav-text">Tarefas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="financas.html" class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-money-bill-wave mr-3"></i>
+                                <span class="nav-text">Finanças</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="vendas.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-shopping-cart mr-3"></i>
+                                <span class="nav-text">Vendas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="relatorios.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-chart-bar mr-3"></i>
+                                <span class="nav-text">Relatórios</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="sustentabilidade.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-leaf mr-3"></i>
+                                <span class="nav-text">Sustentabilidade</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="config.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-cog mr-3"></i>
+                                <span class="nav-text">Configurações</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="p-4 border-t border-indigo-600">
+                <button id="toggle-sidebar" class="flex items-center justify-center w-full p-2 rounded-lg hover:bg-indigo-800 transition">
+                    <i class="fas fa-chevron-left"></i>
+                    <span class="nav-text ml-3">Recolher</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content ml-64 flex-1 overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
+                <h1 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-money-bill-wave text-indigo-600 mr-2"></i>
+                    Finanças
+                </h1>
+
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="busca-financa" placeholder="Buscar transação..." 
+                            class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <div class="relative">
+                            <i class="fas fa-bell text-gray-600 text-xl cursor-pointer hover:text-indigo-600"></i>
+                            <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">3</span>
+                        </div>
+
+                        <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center cursor-pointer">
+                            <i class="fas fa-user text-indigo-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="p-6">
+                <!-- Error Message -->
+                <div id="mensagem-erro" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
+                    <p id="erro-texto"></p>
+                </div>
+
+                <!-- Success Message -->
+                <div id="mensagem-sucesso" class="hidden bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+                    <p id="sucesso-texto"></p>
+                </div>
+
+                <!-- Filters -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Filtros</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label for="data-inicio" class="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
+                            <input type="date" id="data-inicio" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="data-fim" class="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
+                            <input type="date" id="data-fim" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label for="filtro-tipo" class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                            <select id="filtro-tipo" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Todos</option>
+                                <option value="entrada">Entrada</option>
+                                <option value="saida">Saída</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filtro-categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                            <select id="filtro-categoria" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Todas</option>
+                                <option value="venda">Venda</option>
+                                <option value="despesa">Despesa</option>
+                                <option value="investimento">Investimento</option>
+                                <option value="impostos">Impostos</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <button id="btn-filtrar" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg">
+                            Filtrar
+                        </button>
+                        <button id="btn-limpar" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
+                            Limpar Filtros
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Entradas</p>
+                                <h3 id="total-entradas" class="text-2xl font-semibold positive-value">R$ 0,00</h3>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-full">
+                                <i class="fas fa-arrow-up text-green-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Saídas</p>
+                                <h3 id="total-saidas" class="text-2xl font-semibold negative-value">R$ 0,00</h3>
+                            </div>
+                            <div class="bg-red-100 p-3 rounded-full">
+                                <i class="fas fa-arrow-down text-red-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Saldo</p>
+                                <h3 id="saldo" class="text-2xl font-semibold">R$ 0,00</h3>
+                            </div>
+                            <div class="bg-indigo-100 p-3 rounded-full">
+                                <i class="fas fa-wallet text-indigo-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Faturamento</p>
+                                <h3 id="faturamento" class="text-2xl font-semibold positive-value">R$ 0,00</h3>
+                            </div>
+                            <div class="bg-blue-100 p-3 rounded-full">
+                                <i class="fas fa-chart-line text-blue-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Fluxo Mensal</h2>
+                            <select id="chart-period" class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="3">Últimos 3 meses</option>
+                                <option value="6">Últimos 6 meses</option>
+                                <option value="12">Últimos 12 meses</option>
+                            </select>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="monthly-flow-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">Distribuição por Categoria</h2>
+                        <div class="chart-container">
+                            <canvas id="category-distribution-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Buttons -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <button id="btn-nova-entrada" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-plus mr-2"></i> Nova Entrada
+                    </button>
+                    <button id="btn-nova-saida" class="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-minus mr-2"></i> Nova Saída
+                    </button>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-800">Transações</h2>
+                        <div class="flex items-center space-x-2">
+                            <select id="tabela-ordem" class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="data-desc">Mais recentes</option>
+                                <option value="data-asc">Mais antigas</option>
+                                <option value="valor-desc">Maior valor</option>
+                                <option value="valor-asc">Menor valor</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-transacoes" class="bg-white divide-y divide-gray-200">
+                                <!-- Transactions will be loaded here -->
+                                <tr>
+                                    <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+                                        <div class="flex justify-center items-center">
+                                            <div class="loading-spinner mr-2"></div>
+                                            Carregando transações...
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Add/Edit Transaction Modal -->
+    <div id="modal-transacao" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900" id="modal-title">Nova Transação</h3>
+                        <button type="button" id="close-modal" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="form-transacao">
+                        <input type="hidden" id="transacao-id">
+                        <div class="mb-4">
+                            <label for="transacao-descricao" class="block text-sm font-medium text-gray-700">Descrição *</label>
+                            <input type="text" id="transacao-descricao" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="transacao-valor" class="block text-sm font-medium text-gray-700">Valor *</label>
+                            <input type="number" id="transacao-valor" step="0.01" min="0" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="transacao-data" class="block text-sm font-medium text-gray-700">Data *</label>
+                            <input type="date" id="transacao-data" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                        </div>
+                        <div class="mb-4">
+                            <label for="transacao-tipo" class="block text-sm font-medium text-gray-700">Tipo *</label>
+                            <select id="transacao-tipo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                                <option value="entrada">Entrada</option>
+                                <option value="saida">Saída</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="transacao-categoria" class="block text-sm font-medium text-gray-700">Categoria *</label>
+                            <select id="transacao-categoria" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                                <option value="venda">Venda</option>
+                                <option value="despesa">Despesa</option>
+                                <option value="investimento">Investimento</option>
+                                <option value="impostos">Impostos</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" id="cancel-modal" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
+                                Cancelar
+                            </button>
+                            <button type="submit" id="submit-transacao" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg">
+                                <span id="submit-text">Salvar</span>
+                                <span id="submit-loading" class="hidden">
+                                    <span class="loading-spinner inline-block mr-2"></span>
+                                    Salvando...
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize charts
+        let monthlyFlowChart, categoryDistributionChart;
+
+        // Toggle sidebar
+        document.getElementById('toggle-sidebar').addEventListener('click', function() {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+            document.querySelector('.main-content').classList.toggle('ml-64');
+            document.querySelector('.main-content').classList.toggle('ml-20');
+            
+            const icon = this.querySelector('i');
+            if (document.querySelector('.sidebar').classList.contains('collapsed')) {
+                icon.classList.remove('fa-chevron-left');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-left');
+            }
+        });
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set default dates
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('data-inicio').value = formatDateForInput(firstDay);
+            document.getElementById('data-fim').value = formatDateForInput(today);
+            document.getElementById('transacao-data').value = formatDateForInput(today);
+            
+            // Load initial data
+            carregarTransacoes();
+            carregarResumoFinanceiro();
+            initCharts();
+        });
+
+        // Load transactions from API
+        async function carregarTransacoes() {
+            try {
+                const inicio = document.getElementById('data-inicio').value;
+                const fim = document.getElementById('data-fim').value;
+                const tipo = document.getElementById('filtro-tipo').value;
+                const categoria = document.getElementById('filtro-categoria').value;
+                const ordem = document.getElementById('tabela-ordem').value;
+
+                // Build query params
+                const params = new URLSearchParams();
+                if (inicio) params.append('start_date', inicio);
+                if (fim) params.append('end_date', fim);
+                if (tipo) params.append('type', tipo);
+                if (categoria) params.append('category', categoria);
+                if (ordem) params.append('order', ordem);
+
+                const response = await fetch(`/api/transactions?${params.toString()}`);
+                if (!response.ok) throw new Error('Erro ao carregar transações');
+                
+                const transacoes = await response.json();
+                renderizarTabelaTransacoes(transacoes);
+            } catch (error) {
+                console.error('Erro ao carregar transações:', error);
+                mostrarMensagem('Erro ao carregar transações. Tente novamente.', 'error');
+                
+                // Show error in table
+                document.getElementById('tabela-transacoes').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-sm text-red-500">
+                            Erro ao carregar transações. Tente recarregar a página.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // Load financial summary from API
+        async function carregarResumoFinanceiro() {
+            try {
+                const inicio = document.getElementById('data-inicio').value;
+                const fim = document.getElementById('data-fim').value;
+
+                // Build query params
+                const params = new URLSearchParams();
+                if (inicio) params.append('start_date', inicio);
+                if (fim) params.append('end_date', fim);
+
+                const response = await fetch(`/api/finances/summary?${params.toString()}`);
+                if (!response.ok) throw new Error('Erro ao carregar resumo financeiro');
+                
+                const resumo = await response.json();
+                atualizarResumo(resumo);
+            } catch (error) {
+                console.error('Erro ao carregar resumo financeiro:', error);
+                mostrarMensagem('Erro ao carregar resumo financeiro. Tente novamente.', 'error');
+            }
+        }
+
+        // Update summary cards
+        function atualizarResumo(resumo) {
+            document.getElementById('total-entradas').textContent = formatCurrency(resumo.total_income || 0);
+            document.getElementById('total-saidas').textContent = formatCurrency(resumo.total_expenses || 0);
+            document.getElementById('saldo').textContent = formatCurrency(resumo.balance || 0);
+            document.getElementById('faturamento').textContent = formatCurrency(resumo.total_income || 0);
+            
+            // Update color based on value
+            document.getElementById('saldo').className = `text-2xl font-semibold ${(resumo.balance || 0) >= 0 ? 'positive-value' : 'negative-value'}`;
+        }
+
+        // Render transactions table
+        function renderizarTabelaTransacoes(transacoes) {
+            const container = document.getElementById('tabela-transacoes');
+            
+            if (!transacoes || transacoes.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+                            Nenhuma transação encontrada com os filtros selecionados
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            transacoes.forEach(transacao => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${formatDate(transacao.date)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        ${transacao.description}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${transacao.type === 'entrada' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${transacao.type === 'entrada' ? 'Entrada' : 'Saída'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${formatCategory(transacao.category)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm ${transacao.type === 'entrada' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}">
+                        ${transacao.type === 'entrada' ? '+' : '-'} ${formatCurrency(transacao.amount)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button onclick="editarTransacao('${transacao.id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="excluirTransacao('${transacao.id}')" class="text-red-600 hover:text-red-900">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                
+                container.appendChild(row);
+            });
+        }
+
+        // Initialize charts
+        function initCharts() {
+            const monthlyFlowCtx = document.getElementById('monthly-flow-chart').getContext('2d');
+            const categoryDistributionCtx = document.getElementById('category-distribution-chart').getContext('2d');
+            
+            // Monthly Flow Chart
+            monthlyFlowChart = new Chart(monthlyFlowCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                    datasets: [
+                        {
+                            label: 'Entradas',
+                            data: [1200, 1900, 1500, 2000, 1800, 2200],
+                            backgroundColor: '#10b981',
+                            borderColor: '#10b981',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Saídas',
+                            data: [800, 1200, 1000, 1500, 1300, 900],
+                            backgroundColor: '#ef4444',
+                            borderColor: '#ef4444',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return 'R$ ' + value.toLocaleString('pt-BR');
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += 'R$ ' + context.raw.toLocaleString('pt-BR');
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Category Distribution Chart
+            categoryDistributionChart = new Chart(categoryDistributionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Vendas', 'Despesas', 'Investimentos', 'Impostos', 'Outros'],
+                    datasets: [{
+                        data: [65, 15, 10, 5, 5],
+                        backgroundColor: [
+                            '#10b981',
+                            '#ef4444',
+                            '#3b82f6',
+                            '#f59e0b',
+                            '#8b5cf6'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${percentage}% (R$ ${value.toLocaleString('pt-BR')})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Open modal for new transaction
+        document.getElementById('btn-nova-entrada').addEventListener('click', () => {
+            document.getElementById('form-transacao').reset();
+            document.getElementById('transacao-tipo').value = 'entrada';
+            document.getElementById('transacao-categoria').value = 'venda';
+            document.getElementById('modal-title').textContent = 'Nova Entrada';
+            
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('transacao-data').value = today;
+            
+            openModal('modal-transacao');
+        });
+
+        document.getElementById('btn-nova-saida').addEventListener('click', () => {
+            document.getElementById('form-transacao').reset();
+            document.getElementById('transacao-tipo').value = 'saida';
+            document.getElementById('transacao-categoria').value = 'despesa';
+            document.getElementById('modal-title').textContent = 'Nova Saída';
+            
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('transacao-data').value = today;
+            
+            openModal('modal-transacao');
+        });
+
+        // Edit transaction
+        async function editarTransacao(id) {
+            try {
+                const response = await fetch(`/api/transactions/${id}`);
+                if (!response.ok) throw new Error('Erro ao carregar transação');
+                
+                const transacao = await response.json();
+                
+                document.getElementById('transacao-id').value = transacao.id;
+                document.getElementById('transacao-descricao').value = transacao.description;
+                document.getElementById('transacao-valor').value = transacao.amount;
+                document.getElementById('transacao-data').value = transacao.date.split('T')[0];
+                document.getElementById('transacao-tipo').value = transacao.type;
+                document.getElementById('transacao-categoria').value = transacao.category;
+                
+                document.getElementById('modal-title').textContent = 'Editar Transação';
+                openModal('modal-transacao');
+            } catch (error) {
+                console.error('Erro ao carregar transação:', error);
+                mostrarMensagem('Erro ao carregar transação. Tente novamente.', 'error');
+            }
+        }
+
+        // Delete transaction
+        async function excluirTransacao(id) {
+            if (confirm('Tem certeza que deseja excluir esta transação?')) {
+                try {
+                    const response = await fetch(`/api/transactions/${id}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (!response.ok) throw new Error('Erro ao excluir transação');
+                    
+                    mostrarMensagem('Transação excluída com sucesso!', 'success');
+                    carregarTransacoes();
+                    carregarResumoFinanceiro();
+                } catch (error) {
+                    console.error('Erro ao excluir transação:', error);
+                    mostrarMensagem('Erro ao excluir transação. Tente novamente.', 'error');
+                }
+            }
+        }
+
+        // Save transaction
+        document.getElementById('form-transacao').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const id = document.getElementById('transacao-id').value;
+            const descricao = document.getElementById('transacao-descricao').value;
+            const valor = parseFloat(document.getElementById('transacao-valor').value);
+            const data = document.getElementById('transacao-data').value;
+            const tipo = document.getElementById('transacao-tipo').value;
+            const categoria = document.getElementById('transacao-categoria').value;
+            
+            // Show loading state
+            document.getElementById('submit-text').classList.add('hidden');
+            document.getElementById('submit-loading').classList.remove('hidden');
+            
+            try {
+                let response;
+                const transactionData = {
+                    description: descricao,
+                    amount: valor,
+                    date: data,
+                    type: tipo,
+                    category: categoria
+                };
+                
+                if (id) {
+                    // Update existing transaction
+                    response = await fetch(`/api/transactions/${id}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(transactionData)
+                    });
+                } else {
+                    // Add new transaction
+                    response = await fetch('/api/transactions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(transactionData)
+                    });
+                }
+                
+                if (!response.ok) throw new Error('Erro ao salvar transação');
+                
+                mostrarMensagem('Transação salva com sucesso!', 'success');
+                closeModal('modal-transacao');
+                carregarTransacoes();
+                carregarResumoFinanceiro();
+            } catch (error) {
+                console.error('Erro ao salvar transação:', error);
+                mostrarMensagem('Erro ao salvar transação. Tente novamente.', 'error');
+            } finally {
+                // Reset loading state
+                document.getElementById('submit-text').classList.remove('hidden');
+                document.getElementById('submit-loading').classList.add('hidden');
+            }
+        });
+
+        // Filter transactions
+        document.getElementById('btn-filtrar').addEventListener('click', () => {
+            carregarTransacoes();
+            carregarResumoFinanceiro();
+        });
+
+        // Clear filters
+        document.getElementById('btn-limpar').addEventListener('click', () => {
+            document.getElementById('data-inicio').value = '';
+            document.getElementById('data-fim').value = '';
+            document.getElementById('filtro-tipo').value = '';
+            document.getElementById('filtro-categoria').value = '';
+            
+            carregarTransacoes();
+            carregarResumoFinanceiro();
+        });
+
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // Event listeners for modals
+        document.getElementById('close-modal').addEventListener('click', () => closeModal('modal-transacao'));
+        document.getElementById('cancel-modal').addEventListener('click', () => closeModal('modal-transacao'));
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === document.getElementById('modal-transacao')) {
+                closeModal('modal-transacao');
+            }
+        });
+
+        // Show error/success message
+        function mostrarMensagem(texto, tipo = 'error') {
+            const mensagemErro = document.getElementById('mensagem-erro');
+            const mensagemSucesso = document.getElementById('mensagem-sucesso');
+            const textoErro = document.getElementById('erro-texto');
+            const textoSucesso = document.getElementById('sucesso-texto');
+            
+            if (tipo === 'error') {
+                textoErro.textContent = texto;
+                mensagemErro.classList.remove('hidden');
+                mensagemSucesso.classList.add('hidden');
+            } else {
+                textoSucesso.textContent = texto;
+                mensagemSucesso.classList.remove('hidden');
+                mensagemErro.classList.add('hidden');
+            }
+            
+            setTimeout(() => {
+                mensagemErro.classList.add('hidden');
+                mensagemSucesso.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Helper functions
+        function formatCurrency(value) {
+            return 'R$ ' + value.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+\,)/g, '$1.');
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pt-BR');
+        }
+
+        function formatDateForInput(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatCategory(category) {
+            switch(category) {
+                case 'venda': return 'Venda';
+                case 'despesa': return 'Despesa';
+                case 'investimento': return 'Investimento';
+                case 'impostos': return 'Impostos';
+                case 'outros': return 'Outros';
+                default: return category;
+            }
+        }
+
+        // Table order change
+        document.getElementById('tabela-ordem').addEventListener('change', carregarTransacoes);
+
+        // Search transactions
+        document.getElementById('busca-financa').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#tabela-transacoes tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        // Highlight current page in sidebar
+        document.addEventListener('DOMContentLoaded', function () {
+            // Remove highlight from all
+            document.querySelectorAll('.sidebar .nav-item').forEach(function (link) {
+                link.classList.remove('bg-indigo-800');
+            });
+
+            // Apply highlight to current page
+            document.querySelectorAll('.sidebar .nav-item').forEach(function (link) {
+                const href = link.getAttribute('href');
+                if (href && window.location.pathname.endsWith(href)) {
+                    link.classList.add('bg-indigo-800');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

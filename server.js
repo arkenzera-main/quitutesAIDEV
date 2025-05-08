@@ -28,9 +28,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    console.log('Headers:', req.headers);
-    console.log('Body:', req.body); // Agora deve mostrar o body corretamente
+    // Console logs para apoio na depuracao e para testes r
+    //console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    //console.log('Headers:', req.headers);
+    //console.log('Body:', req.body); // Agora deve mostrar o body corretamente
     next();
 });
 
