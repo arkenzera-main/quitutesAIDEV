@@ -1,0 +1,26 @@
+Criar banco de dados
+executar aplicação
+verificar as tabelas
+apontar erros
+
+
+
+> Checklist erros
+
+Tela > dashboard
+Navegação da listagem cria paginação em branco(verificar se existem linhas null no banco ou erro no codigo)
+
+
+Tela > Estoque
+Navegação da listagem cria paginação em branco
+
+
+Tela tarefas
+
+
+Tela receitas
+
+P2 - Erro ao cadastrar "CATEGORIA" de receita - https://github.com/arkenzera-main/quitutesAIDEV/blob/main/bugprint/ErroAoSalvarCategoria-Capturadetela2025-05-08-162422.png
+
+
+
