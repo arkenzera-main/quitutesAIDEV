@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Quitutes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .sidebar {
+            transition: all 0.3s;
+        }
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        .sidebar.collapsed .nav-text {
+            display: none;
+        }
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+        }
+        .main-content {
+            transition: all 0.3s;
+        }
+        .sidebar.collapsed+.main-content {
+            margin-left: 80px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .notification {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar bg-indigo-700 text-white w-64 flex flex-col fixed h-full">
+            <a href="/">
+                <div class="p-4 flex items-center space-x-3 border-b border-indigo-600">
+                    <div class="bg-white p-2 rounded-lg">
+                        <i class="fas fa-cookie-bite text-indigo-700 text-xl"></i>
+                    </div>
+                    <span class="logo-text font-bold text-xl">Quitutes</span>
+                </div>
+            </a>
+
+            <div class="p-4 flex-1 overflow-y-auto">
+                <nav>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="/" class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-tachometer-alt mr-3"></i>
+                                <span class="nav-text">Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/estoque.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-box-open mr-3"></i>
+                                <span class="nav-text">Estoque</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/receitas.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-utensils mr-3"></i>
+                                <span class="nav-text">Receitas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/tarefas" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800">
+                                <i class="fas fa-tasks mr-3"></i>
+                                <span class="nav-text">Tarefas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/financas" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-money-bill-wave mr-3"></i>
+                                <span class="nav-text">Finanças</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/vendas" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-shopping-cart mr-3"></i>
+                                <span class="nav-text">Vendas</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="p-4 border-t border-indigo-600">
+                <button id="toggle-sidebar"
+                    class="flex items-center justify-center w-full p-2 rounded-lg hover:bg-indigo-800 transition">
+                    <i class="fas fa-chevron-left"></i>
+                    <span class="nav-text ml-3">Recolher</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content ml-64 flex-1 overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
+                <h1 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-tachometer-alt text-indigo-600 mr-2"></i>
+                    Dashboard
+                </h1>
+
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Pesquisar..."
+                            class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <div class="relative">
+                            <i class="fas fa-bell text-gray-600 text-xl cursor-pointer hover:text-indigo-600"></i>
+                            <span id="notification-count"
+                                class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">0</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="p-6">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6" id="summary-cards">
+                    <!-- Cards will be populated by JavaScript -->
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Sales Chart -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Vendas Semanais</h2>
+                            <div class="flex space-x-2">
+                                <button class="sales-period-btn px-3 py-1 text-sm border rounded-lg bg-indigo-50 text-indigo-600" data-period="week">Semana</button>
+                                <button class="sales-period-btn px-3 py-1 text-sm border rounded-lg hover:bg-gray-50" data-period="month">Mês</button>
+                                <button class="sales-period-btn px-3 py-1 text-sm border rounded-lg hover:bg-gray-50" data-period="year">Ano</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Top Products Chart -->
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Produtos Mais Vendidos</h2>
+                            <button id="filter-products" class="px-3 py-1 text-sm border rounded-lg bg-indigo-50 text-indigo-600 flex items-center">
+                                <i class="fas fa-filter mr-1"></i>
+                                <span>Filtrar</span>
+                            </button>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="productsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-800">Pedidos Recentes</h2>
+                        <button id="view-all-orders" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center">
+                            <span>Ver Todos</span>
+                            <i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pedido #</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Itens</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="recent-orders">
+                                <!-- Orders will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-4 border-t flex items-center justify-between text-sm text-gray-600">
+                        <div id="orders-count">Carregando pedidos...</div>
+                        <div class="flex space-x-2">
+                            <button id="prev-page" class="px-3 py-1 border rounded hover:bg-gray-50"><i class="fas fa-chevron-left"></i></button>
+                            <button id="page-1" class="px-3 py-1 border rounded bg-indigo-600 text-white">1</button>
+                            <button id="page-2" class="px-3 py-1 border rounded hover:bg-gray-50">2</button>
+                            <button id="page-3" class="px-3 py-1 border rounded hover:bg-gray-50">3</button>
+                            <button id="next-page" class="px-3 py-1 border rounded hover:bg-gray-50"><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low Stock Products -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-800">Produtos com Estoque Baixo</h2>
+                        <button id="view-full-stock" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center">
+                            <span>Ver Estoque Completo</span>
+                            <i class="fas fa-chevron-right ml-1"></i>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estoque Atual</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estoque Mínimo</th>
+                                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="low-stock-products">
+                                <!-- Products will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Server Setup Instructions -->
+    <script type="text/template" id="server-setup">
+        
+    </script>
+
+    <!-- Client-side JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Toggle sidebar
+        document.getElementById('toggle-sidebar').addEventListener('click', function () {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+            document.querySelector('.main-content').classList.toggle('ml-64');
+            document.querySelector('.main-content').classList.toggle('ml-20');
+
+            const icon = this.querySelector('i');
+            if (document.querySelector('.sidebar').classList.contains('collapsed')) {
+                icon.classList.remove('fa-chevron-left');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-left');
+            }
+        });
+
+        // Global variables
+        let salesChart, productsChart;
+        let currentSalesPeriod = 'week';
+        let currentPage = 1;
+        const ordersPerPage = 4;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardSummary();
+            loadSalesData(currentSalesPeriod);
+            loadTopProducts();
+            loadRecentOrders(currentPage);
+            loadLowStockProducts();
+            
+            // Set up event listeners
+            document.querySelectorAll('.sales-period-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    currentSalesPeriod = this.dataset.period;
+                    loadSalesData(currentSalesPeriod);
+                    
+                    // Update active button
+                    document.querySelectorAll('.sales-period-btn').forEach(b => {
+                        b.classList.remove('bg-indigo-50', 'text-indigo-600');
+                        b.classList.add('hover:bg-gray-50');
+                    });
+                    this.classList.add('bg-indigo-50', 'text-indigo-600');
+                    this.classList.remove('hover:bg-gray-50');
+                });
+            });
+            
+            document.getElementById('view-all-orders').addEventListener('click', function() {
+                window.location.href = '/vendas';
+            });
+            
+            document.getElementById('view-full-stock').addEventListener('click', function() {
+                window.location.href = '/estoque';
+            });
+            
+            document.getElementById('filter-products').addEventListener('click', function() {
+                // In a real app, this would open a filter modal
+                showNotification('Filtrar produtos por período', 'info');
+            });
+            
+            // Pagination controls
+            document.getElementById('prev-page').addEventListener('click', function() {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadRecentOrders(currentPage);
+                }
+            });
+            
+            document.getElementById('next-page').addEventListener('click', function() {
+                currentPage++;
+                loadRecentOrders(currentPage);
+            });
+            
+            document.getElementById('page-1').addEventListener('click', function() {
+                currentPage = 1;
+                loadRecentOrders(currentPage);
+            });
+            
+            document.getElementById('page-2').addEventListener('click', function() {
+                currentPage = 2;
+                loadRecentOrders(currentPage);
+            });
+            
+            document.getElementById('page-3').addEventListener('click', function() {
+                currentPage = 3;
+                loadRecentOrders(currentPage);
+            });
+        });
+
+        // Load dashboard summary
+        async function loadDashboardSummary() {
+            try {
+                const response = await fetch('/api/dashboard/summary');
+                const data = await response.json();
+                
+                // Update notification count with low stock products
+                document.getElementById('notification-count').textContent = data.lowStockProducts;
+                
+                // Create summary cards
+                const summaryCards = [
+                    {
+                        title: 'Vendas Hoje',
+                        value: `R$ ${data.todaySales.toFixed(2)}`,
+                        change: '12% em relação a ontem',
+                        icon: 'fa-shopping-bag',
+                        iconBg: 'bg-indigo-100',
+                        iconColor: 'text-indigo-600',
+                        changeColor: 'text-green-500'
+                    },
+                    {
+                        title: 'Pedidos Hoje',
+                        value: data.todayOrders,
+                        change: '8% em relação a ontem',
+                        icon: 'fa-receipt',
+                        iconBg: 'bg-green-100',
+                        iconColor: 'text-green-600',
+                        changeColor: 'text-green-500'
+                    },
+                    {
+                        title: 'Produtos com Estoque Baixo',
+                        value: data.lowStockProducts,
+                        change: 'Precisa de reposição',
+                        icon: 'fa-boxes',
+                        iconBg: 'bg-yellow-100',
+                        iconColor: 'text-yellow-600',
+                        changeColor: 'text-red-500'
+                    },
+                    {
+                        title: 'Clientes Novos',
+                        value: data.newCustomers,
+                        change: 'Este mês',
+                        icon: 'fa-users',
+                        iconBg: 'bg-blue-100',
+                        iconColor: 'text-blue-600',
+                        changeColor: 'text-blue-500'
+                    }
+                ];
+                
+                const cardsContainer = document.getElementById('summary-cards');
+                cardsContainer.innerHTML = '';
+                
+                summaryCards.forEach(card => {
+                    const cardElement = document.createElement('div');
+                    cardElement.className = 'bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition';
+                    cardElement.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">${card.title}</p>
+                                <h3 class="text-2xl font-bold text-gray-800 mt-1">${card.value}</h3>
+                                <p class="text-sm ${card.changeColor} mt-2 flex items-center">
+                                    <i class="fas ${card.changeColor.includes('red') ? 'fa-exclamation-circle' : 'fa-arrow-up'} mr-1"></i>
+                                    <span>${card.change}</span>
+                                </p>
+                            </div>
+                            <div class="${card.iconBg} p-3 rounded-lg">
+                                <i class="fas ${card.icon} ${card.iconColor} text-xl"></i>
+                            </div>
+                        </div>
+                    `;
+                    cardsContainer.appendChild(cardElement);
+                });
+                
+            } catch (error) {
+                console.error('Error loading dashboard summary:', error);
+                showNotification('Erro ao carregar dados do dashboard', 'error');
+            }
+        }
+
+        // Load sales data
+        async function loadSalesData(period) {
+            try {
+                const response = await fetch(`/api/dashboard/sales-data/${period}`);
+                const data = await response.json();
+                
+                // Prepare chart data based on period
+                let labels, values;
+                
+                if (period === 'week') {
+                    labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+                    values = Array(7).fill(0);
+                    
+                    data.forEach(item => {
+                        const dayIndex = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+                            .indexOf(item.day);
+                        if (dayIndex !== -1) {
+                            values[dayIndex] = item.total;
+                        }
+                    });
+                } else if (period === 'month') {
+                    // Get number of days in current month
+                    const now = new Date();
+                    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                    
+                    labels = Array.from({length: daysInMonth}, (_, i) => i + 1);
+                    values = Array(daysInMonth).fill(0);
+                    
+                    data.forEach(item => {
+                        if (item.day >= 1 && item.day <= daysInMonth) {
+                            values[item.day - 1] = item.total;
+                        }
+                    });
+                } else { // year
+                    labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                    values = Array(12).fill(0);
+                    
+                    data.forEach(item => {
+                        const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                           'July', 'August', 'September', 'October', 'November', 'December']
+                            .indexOf(item.month);
+                        if (monthIndex !== -1) {
+                            values[monthIndex] = item.total;
+                        }
+                    });
+                }
+                
+                // Create or update chart
+                const ctx = document.getElementById('salesChart').getContext('2d');
+                
+                if (salesChart) {
+                    salesChart.data.labels = labels;
+                    salesChart.data.datasets[0].data = values;
+                    salesChart.update();
+                } else {
+                    salesChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Vendas (R$)',
+                                data: values,
+                                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                                borderColor: 'rgba(79, 70, 229, 1)',
+                                borderWidth: 2,
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        drawBorder: false
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Error loading sales data:', error);
+                showNotification('Erro ao carregar dados de vendas', 'error');
+            }
+        }
+
+        // Load top products
+        async function loadTopProducts() {
+            try {
+                const response = await fetch('/api/dashboard/top-products');
+                const data = await response.json();
+                
+                // Prepare data for chart
+                const labels = data.map(item => item.name);
+                const values = data.map(item => item.sales_count);
+                
+                // Create or update chart
+                const ctx = document.getElementById('productsChart').getContext('2d');
+                
+                if (productsChart) {
+                    productsChart.data.labels = labels;
+                    productsChart.data.datasets[0].data = values;
+                    productsChart.update();
+                } else {
+                    productsChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Vendas',
+                                data: values,
+                                backgroundColor: [
+                                    'rgba(79, 70, 229, 0.7)',
+                                    'rgba(99, 102, 241, 0.7)',
+                                    'rgba(129, 140, 248, 0.7)',
+                                    'rgba(165, 180, 252, 0.7)',
+                                    'rgba(199, 210, 254, 0.7)'
+                                ],
+                                borderColor: [
+                                    'rgba(79, 70, 229, 1)',
+                                    'rgba(99, 102, 241, 1)',
+                                    'rgba(129, 140, 248, 1)',
+                                    'rgba(165, 180, 252, 1)',
+                                    'rgba(199, 210, 254, 1)'
+                                ],
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        drawBorder: false
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                console.error('Error loading top products:', error);
+                showNotification('Erro ao carregar produtos mais vendidos', 'error');
+            }
+        }
+
+        // Load recent orders
+        async function loadRecentOrders(page) {
+            try {
+                const response = await fetch(`/api/dashboard/recent-orders?page=${page}&limit=${ordersPerPage}`);
+                const data = await response.json();
+                
+                // Update orders table
+                const ordersContainer = document.getElementById('recent-orders');
+                ordersContainer.innerHTML = '';
+                
+                data.orders.forEach(order => {
+                    const statusClasses = {
+                        'pending': 'bg-gray-100 text-gray-800',
+                        'paid': 'bg-purple-100 text-purple-800',
+                        'preparing': 'bg-yellow-100 text-yellow-800',
+                        'on_delivery': 'bg-blue-100 text-blue-800',
+                        'delivered': 'bg-green-100 text-green-800'
+                    };
+                    
+                    const statusText = {
+                        'pending': 'Pendente',
+                        'paid': 'Pago',
+                        'preparing': 'Em preparo',
+                        'on_delivery': 'A caminho',
+                        'delivered': 'Entregue'
+                    };
+                    
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50 transition';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${order.order_number}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                                    <i class="fas fa-user text-indigo-600"></i>
+                                </div>
+                                <div class="text-sm text-gray-900">${order.customer_name}</div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${order.items_count}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">R$ ${order.total_amount.toFixed(2)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 py-1 text-xs rounded-full ${statusClasses[order.status]}">
+                                ${statusText[order.status]}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-500">${order.formatted_date}</td>
+                    `;
+                    ordersContainer.appendChild(row);
+                });
+                
+                // Update pagination info
+                document.getElementById('orders-count').textContent = 
+                    `Mostrando ${((page - 1) * ordersPerPage) + 1} a ${Math.min(page * ordersPerPage, data.total)} de ${data.total} pedidos`;
+                
+                // Update pagination buttons
+                document.getElementById('prev-page').disabled = page === 1;
+                document.getElementById('next-page').disabled = page * ordersPerPage >= data.total;
+                
+                // Update page buttons
+                document.getElementById('page-1').classList.toggle('bg-indigo-600', page === 1);
+                document.getElementById('page-1').classList.toggle('text-white', page === 1);
+                document.getElementById('page-2').classList.toggle('bg-indigo-600', page === 2);
+                document.getElementById('page-2').classList.toggle('text-white', page === 2);
+                document.getElementById('page-3').classList.toggle('bg-indigo-600', page === 3);
+                document.getElementById('page-3').classList.toggle('text-white', page === 3);
+                
+            } catch (error) {
+                console.error('Error loading recent orders:', error);
+                showNotification('Erro ao carregar pedidos recentes', 'error');
+            }
+        }
+
+        // Load low stock products
+        async function loadLowStockProducts() {
+            try {
+                const response = await fetch('/api/dashboard/low-stock');
+                const data = await response.json();
+                
+                // Update products table
+                const productsContainer = document.getElementById('low-stock-products');
+                productsContainer.innerHTML = '';
+                
+                data.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50 transition';
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                                    <i class="fas fa-box text-indigo-600"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">${product.name}</div>
+                                    <div class="text-sm text-gray-500">${product.unit}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.category}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-red-500 font-medium">${product.current_stock}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.minimum_stock}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button class="text-indigo-600 hover:text-indigo-900">Repor</button>
+                        </td>
+                    `;
+                    productsContainer.appendChild(row);
+                });
+                
+            } catch (error) {
+                console.error('Error loading low stock products:', error);
+                showNotification('Erro ao carregar produtos com estoque baixo', 'error');
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500',
+                warning: 'bg-yellow-500'
+            };
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle',
+                warning: 'fa-exclamation-triangle'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white flex items-center notification ${colors[type]}`;
+            notification.innerHTML = `
+                <i class="fas ${icons[type]} mr-2"></i>
+                ${message}
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.add('opacity-0', 'translate-x-4', 'transition');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
