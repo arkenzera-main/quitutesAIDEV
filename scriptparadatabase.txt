@@ -3,7 +3,7 @@ CREATE DATABASE IF NOT EXISTS `quitutes_ai` /*!40100 DEFAULT CHARACTER SET utf8 
 
 USE quitutes_ai;
 
-DASHBOARD.HTML -----------------------------------------------------
+-- DASHBOARD.HTML -----------------------------------------------------
 -- Criar tabela de clientes
 CREATE TABLE IF NOT EXISTS `customers` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
@@ -33,21 +33,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
 
 
 
-ESTOQUE.HTML -----------------------------------------------------
-
--- Criar tabela de itens do pedido
-CREATE TABLE IF NOT EXISTS `order_items` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `order_id` INT(11) NOT NULL,
-  `product_id` INT(11) NOT NULL,
-  `quantity` INT(11) NOT NULL,
-  `unit_price` DECIMAL(10,2) NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `order_id` (`order_id`),
-  KEY `product_id` (`product_id`),
-  CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+-- ESTOQUE.HTML -----------------------------------------------------
 
 -- Criar tabela de produtos
 CREATE TABLE IF NOT EXISTS `products` (
@@ -66,22 +52,38 @@ CREATE TABLE IF NOT EXISTS `products` (
 
 
 
-RECEITAS.HTML -----------------------------------------------------
-
-
--- Criar tabela de receitas
-CREATE TABLE IF NOT EXISTS `recipes` (
+-- Criar tabela de itens do pedido
+CREATE TABLE IF NOT EXISTS `order_items` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(100) NOT NULL,
-  `category` VARCHAR(50) NOT NULL,
-  `prep_time` INT(11) NOT NULL,
-  `image_url` VARCHAR(255) DEFAULT NULL,
-  `instructions` TEXT NOT NULL,
-  `notes` TEXT DEFAULT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  `order_id` INT(11) NOT NULL,
+  `product_id` INT(11) NOT NULL,
+  `quantity` INT(11) NOT NULL,
+  `unit_price` DECIMAL(10,2) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `order_id` (`order_id`),
+  KEY `product_id` (`product_id`),
+  CONSTRAINT `order_items_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `order_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
+
+
+
+
+-- RECEITAS.HTML -----------------------------------------------------
+-- Criar tabela de receitas
+CREATE TABLE `recipes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `prep_time` int(11) NOT NULL,
+  `image_url` varchar(255) DEFAULT NULL,
+  `instructions` text NOT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- Criar tabela de ingredientes das receitas
 CREATE TABLE IF NOT EXISTS `recipe_ingredients` (
@@ -110,24 +112,13 @@ CREATE TABLE IF NOT EXISTS `recipe_log` (
   CONSTRAINT `recipe_log_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipes` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
-CREATE TABLE `recipes` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) NOT NULL,
-  `category` varchar(50) NOT NULL,
-  `prep_time` int(11) NOT NULL,
-  `image_url` varchar(255) DEFAULT NULL,
-  `instructions` text NOT NULL,
-  `notes` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 
 
 
 
-TAREFAS.HTML -----------------------------------------------------
+
+-- TAREFAS.HTML -----------------------------------------------------
 
 
 CREATE TABLE IF NOT EXISTS task_categories (
