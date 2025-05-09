@@ -113,10 +113,16 @@
                             </a>
                         </li>
                         <li>
-                            <a href="/relatorios.html"
-                                class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                            <a href="/relatorios.html" class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
                                 <i class="fas fa-chart-bar mr-3"></i>
                                 <span class="nav-text">Relatórios</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="sustentabilidade.html"
+                                class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-leaf mr-3"></i>
+                                <span class="nav-text">Sustentabilidade</span>
                             </a>
                         </li>
                     </ul>
@@ -235,7 +241,8 @@
                             <h3 class="text-lg font-medium text-gray-800 mb-3">Filtros</h3>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label for="filter-category" class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                                    <label for="filter-category"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
                                     <select id="filter-category"
                                         class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="">Todas categorias</option>
@@ -243,7 +250,8 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="filter-status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                    <label for="filter-status"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                                     <select id="filter-status"
                                         class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="">Todos status</option>
@@ -252,7 +260,8 @@
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="filter-sort" class="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
+                                    <label for="filter-sort"
+                                        class="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
                                     <select id="filter-sort"
                                         class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                         <option value="name_asc">Nome (A-Z)</option>
@@ -426,7 +435,7 @@
                     const endDate = new Date();
                     const startDate = new Date();
                     startDate.setMonth(startDate.getMonth() - 1);
-                    
+
                     document.getElementById('start-date').valueAsDate = startDate;
                     document.getElementById('end-date').valueAsDate = endDate;
                 } else {
@@ -458,10 +467,10 @@
         function showReportConfiguration(title) {
             document.getElementById('report-title').textContent = title;
             document.getElementById('report-configuration').classList.remove('hidden');
-            
+
             // Scroll to configuration panel
             document.getElementById('report-configuration').scrollIntoView({ behavior: 'smooth' });
-            
+
             // Load initial preview
             updateReportPreview();
         }
@@ -472,15 +481,15 @@
                 // Show loading state
                 const previewBody = document.getElementById('report-preview-body');
                 previewBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center">Carregando...</td></tr>';
-                
+
                 // Get filters
                 const period = document.getElementById('report-period').value;
                 const category = document.getElementById('filter-category').value;
                 const status = document.getElementById('filter-status').value;
                 const sort = document.getElementById('filter-sort').value;
-                
+
                 let startDate, endDate;
-                
+
                 if (period === 'custom') {
                     startDate = document.getElementById('start-date').value;
                     endDate = document.getElementById('end-date').value;
@@ -488,7 +497,7 @@
                     // Calculate dates based on period
                     const today = new Date();
                     endDate = formatDate(today);
-                    
+
                     switch (period) {
                         case 'today':
                             startDate = endDate;
@@ -515,7 +524,7 @@
                             break;
                     }
                 }
-                
+
                 // Fetch report data from API
                 const response = await fetch('/api/reports/preview', {
                     method: 'POST',
@@ -531,28 +540,28 @@
                         sort
                     })
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 const data = await response.json();
                 reportData = data;
-                
+
                 // Update preview table
                 previewBody.innerHTML = '';
-                
+
                 if (data.length === 0) {
                     previewBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center">Nenhum dado encontrado</td></tr>';
                     return;
                 }
-                
+
                 // For demo purposes, we'll show a preview with sample data structure
                 // In a real app, you would use the actual data structure from your API
                 data.forEach(item => {
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-gray-50';
-                    
+
                     row.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">${item.name || 'N/A'}</div>
@@ -569,14 +578,14 @@
                             </span>
                         </td>
                     `;
-                    
+
                     previewBody.appendChild(row);
                 });
-                
+
             } catch (error) {
                 console.error('Error updating report preview:', error);
                 showNotification('Erro ao carregar pré-visualização', 'error');
-                
+
                 const previewBody = document.getElementById('report-preview-body');
                 previewBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-red-500">Erro ao carregar dados</td></tr>';
             }
@@ -588,21 +597,21 @@
                 showNotification('Selecione um tipo de relatório primeiro', 'warning');
                 return;
             }
-            
+
             if (reportData.length === 0) {
                 showNotification('Nenhum dado para exportar', 'warning');
                 return;
             }
-            
+
             try {
                 // Get filters
                 const period = document.getElementById('report-period').value;
                 const category = document.getElementById('filter-category').value;
                 const status = document.getElementById('filter-status').value;
                 const sort = document.getElementById('filter-sort').value;
-                
+
                 let startDate, endDate;
-                
+
                 if (period === 'custom') {
                     startDate = document.getElementById('start-date').value;
                     endDate = document.getElementById('end-date').value;
@@ -610,7 +619,7 @@
                     // Calculate dates based on period
                     const today = new Date();
                     endDate = formatDate(today);
-                    
+
                     switch (period) {
                         case 'today':
                             startDate = endDate;
@@ -637,7 +646,7 @@
                             break;
                     }
                 }
-                
+
                 // Call API to generate export
                 const response = await fetch('/api/reports/export', {
                     method: 'POST',
@@ -654,11 +663,11 @@
                         sort
                     })
                 });
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 // Handle different export formats
                 if (format === 'pdf') {
                     // For PDF, we expect a file download
@@ -674,10 +683,10 @@
                 } else {
                     // For other formats, we can handle the data directly
                     const data = await response.json();
-                    
+
                     let exportContent = '';
                     let filename = `relatorio_${currentReportType}_${new Date().toISOString().slice(0, 10)}`;
-                    
+
                     switch (format) {
                         case 'csv':
                             exportContent = convertToCSV(data);
@@ -692,7 +701,7 @@
                             filename += '.xml';
                             break;
                     }
-                    
+
                     // Create download
                     const blob = new Blob([exportContent], { type: `text/${format}` });
                     const url = window.URL.createObjectURL(blob);
@@ -704,11 +713,11 @@
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(url);
                 }
-                
+
                 // Add to recent reports
                 addToRecentReports(currentReportType, format);
                 showNotification('Relatório exportado com sucesso', 'success');
-                
+
             } catch (error) {
                 console.error('Error exporting report:', error);
                 showNotification('Erro ao exportar relatório', 'error');
@@ -719,24 +728,28 @@
         async function loadRecentReports() {
             try {
                 const response = await fetch('/api/reports/recent');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const reports = await response.json();
-                
+
                 const recentReportsBody = document.getElementById('recent-reports-body');
                 recentReportsBody.innerHTML = '';
-                
-                if (reports.length === 0) {
+
+                if (!reports || reports.length === 0) {
                     recentReportsBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">Nenhum relatório recente</td></tr>';
                     return;
                 }
-                
+
                 reports.forEach(report => {
                     const row = document.createElement('tr');
                     row.className = 'hover:bg-gray-50';
-                    
+
                     // Format date
                     const reportDate = new Date(report.date);
                     const formattedDate = reportDate.toLocaleDateString('pt-BR');
-                    
+
                     // Get icon based on format
                     let formatIcon, formatColor;
                     switch (report.format) {
@@ -760,7 +773,7 @@
                             formatIcon = 'fa-file';
                             formatColor = 'text-gray-600';
                     }
-                    
+
                     row.innerHTML = `
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">${report.name}</div>
@@ -779,10 +792,10 @@
                             <button class="text-indigo-600 hover:text-indigo-900 download-report" data-id="${report.id}">Download</button>
                         </td>
                     `;
-                    
+
                     recentReportsBody.appendChild(row);
                 });
-                
+
                 // Add event listeners to download buttons
                 document.querySelectorAll('.download-report').forEach(btn => {
                     btn.addEventListener('click', function () {
@@ -790,7 +803,7 @@
                         downloadReport(reportId);
                     });
                 });
-                
+
             } catch (error) {
                 console.error('Error loading recent reports:', error);
                 const recentReportsBody = document.getElementById('recent-reports-body');
@@ -806,7 +819,7 @@
                     sales: 'Relatório de Vendas',
                     financial: 'Relatório Financeiro'
                 }[type] || 'Relatório';
-                
+
                 await fetch('/api/reports/recent', {
                     method: 'POST',
                     headers: {
@@ -818,10 +831,10 @@
                         format
                     })
                 });
-                
+
                 // Refresh recent reports list
                 loadRecentReports();
-                
+
             } catch (error) {
                 console.error('Error adding to recent reports:', error);
             }
@@ -831,22 +844,22 @@
         async function downloadReport(reportId) {
             try {
                 const response = await fetch(`/api/reports/download/${reportId}`);
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                
+
                 const blob = await response.blob();
                 const contentDisposition = response.headers.get('Content-Disposition');
                 let filename = `relatorio_${reportId}`;
-                
+
                 if (contentDisposition) {
                     const filenameMatch = contentDisposition.match(/filename="?(.+?)"?(;|$)/);
                     if (filenameMatch && filenameMatch[1]) {
                         filename = filenameMatch[1];
                     }
                 }
-                
+
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -855,9 +868,9 @@
                 a.click();
                 document.body.removeChild(a);
                 window.URL.revokeObjectURL(url);
-                
+
                 showNotification('Download iniciado', 'success');
-                
+
             } catch (error) {
                 console.error('Error downloading report:', error);
                 showNotification('Erro ao baixar relatório', 'error');
@@ -868,18 +881,24 @@
         async function loadCategories() {
             try {
                 const response = await fetch('/api/products/categories');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+
                 const categories = await response.json();
-                
+
                 const categoryFilter = document.getElementById('filter-category');
                 categoryFilter.innerHTML = '<option value="">Todas categorias</option>';
-                
-                categories.forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category;
-                    option.textContent = category;
-                    categoryFilter.appendChild(option);
-                });
-                
+
+                if (categories && categories.length > 0) {
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category;
+                        option.textContent = category;
+                        categoryFilter.appendChild(option);
+                    });
+                }
             } catch (error) {
                 console.error('Error loading categories:', error);
             }
@@ -891,23 +910,23 @@
             let month = '' + (d.getMonth() + 1);
             let day = '' + d.getDate();
             const year = d.getFullYear();
-            
+
             if (month.length < 2) month = '0' + month;
             if (day.length < 2) day = '0' + day;
-            
+
             return [year, month, day].join('-');
         }
 
         // Helper function to convert data to CSV
         function convertToCSV(data) {
             if (!data || data.length === 0) return '';
-            
+
             // Get headers
             const headers = Object.keys(data[0]);
-            
+
             // Create CSV content
             let csv = headers.join(',') + '\n';
-            
+
             data.forEach(item => {
                 const row = headers.map(header => {
                     // Escape quotes and wrap in quotes if contains comma
@@ -918,20 +937,20 @@
                     }
                     return value;
                 });
-                
+
                 csv += row.join(',') + '\n';
             });
-            
+
             return csv;
         }
 
         // Helper function to convert data to XML
         function convertToXML(data) {
             if (!data || data.length === 0) return '<report></report>';
-            
+
             let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
             xml += '<report>\n';
-            
+
             data.forEach(item => {
                 xml += '  <item>\n';
                 for (const key in item) {
@@ -942,7 +961,7 @@
                 }
                 xml += '  </item>\n';
             });
-            
+
             xml += '</report>';
             return xml;
         }
@@ -950,10 +969,10 @@
         // Helper function to escape XML special characters
         function escapeXML(str) {
             return str.replace(/&/g, '&amp;')
-                     .replace(/</g, '&lt;')
-                     .replace(/>/g, '&gt;')
-                     .replace(/"/g, '&quot;')
-                     .replace(/'/g, '&apos;');
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
         }
 
         // Show notification
