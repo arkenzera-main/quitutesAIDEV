@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios - Quitutes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .sidebar {
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+        }
+
+        .sidebar.collapsed .nav-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+        }
+
+        .main-content {
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed+.main-content {
+            margin-left: 80px;
+        }
+
+        .notification {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar bg-indigo-700 text-white w-64 flex flex-col fixed h-full">
+            <a href="/">
+                <div class="p-4 flex items-center space-x-3 border-b border-indigo-600">
+                    <div class="bg-white p-2 rounded-lg">
+                        <i class="fas fa-cookie-bite text-indigo-700 text-xl"></i>
+                    </div>
+                    <span class="logo-text font-bold text-xl">Quitutes</span>
+                </div>
+            </a>
+
+            <div class="p-4 flex-1 overflow-y-auto">
+                <nav>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="/dashboard.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-tachometer-alt mr-3"></i>
+                                <span class="nav-text">Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/estoque.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-box-open mr-3"></i>
+                                <span class="nav-text">Estoque</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/receitas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-utensils mr-3"></i>
+                                <span class="nav-text">Receitas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/tarefas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-tasks mr-3"></i>
+                                <span class="nav-text">Tarefas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/financas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-money-bill-wave mr-3"></i>
+                                <span class="nav-text">Finanças</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/vendas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-shopping-cart mr-3"></i>
+                                <span class="nav-text">Vendas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="/relatorios.html"
+                                class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-chart-bar mr-3"></i>
+                                <span class="nav-text">Relatórios</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="p-4 border-t border-indigo-600">
+                <button id="toggle-sidebar"
+                    class="flex items-center justify-center w-full p-2 rounded-lg hover:bg-indigo-800 transition">
+                    <i class="fas fa-chevron-left"></i>
+                    <span class="nav-text ml-3">Recolher</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content ml-64 flex-1 overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
+                <h1 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-chart-bar text-indigo-600 mr-2"></i>
+                    Relatórios
+                </h1>
+
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" placeholder="Pesquisar relatórios..." id="search-reports"
+                            class="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="p-6">
+                <!-- Report Types -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- Stock Report -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer"
+                        id="stock-report">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Relatório de Estoque</p>
+                                <h3 class="text-2xl font-bold text-gray-800 mt-1">Estoque</h3>
+                                <p class="text-sm text-gray-500 mt-2">Produtos e quantidades em estoque</p>
+                            </div>
+                            <div class="bg-indigo-100 p-3 rounded-lg">
+                                <i class="fas fa-boxes text-indigo-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sales Report -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer"
+                        id="sales-report">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Relatório de Vendas</p>
+                                <h3 class="text-2xl font-bold text-gray-800 mt-1">Vendas</h3>
+                                <p class="text-sm text-gray-500 mt-2">Histórico e análise de vendas</p>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i class="fas fa-shopping-cart text-green-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial Report -->
+                    <div class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition cursor-pointer"
+                        id="financial-report">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Relatório Financeiro</p>
+                                <h3 class="text-2xl font-bold text-gray-800 mt-1">Finanças</h3>
+                                <p class="text-sm text-gray-500 mt-2">Receitas, despesas e lucros</p>
+                            </div>
+                            <div class="bg-blue-100 p-3 rounded-lg">
+                                <i class="fas fa-money-bill-wave text-blue-600 text-xl"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Configuration -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6 hidden" id="report-configuration">
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-800" id="report-title">Configurar Relatório</h2>
+                        <div class="flex items-center space-x-3">
+                            <div class="relative">
+                                <select id="report-period"
+                                    class="appearance-none bg-white border rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <option value="today">Hoje</option>
+                                    <option value="week">Esta semana</option>
+                                    <option value="month" selected>Este mês</option>
+                                    <option value="quarter">Este trimestre</option>
+                                    <option value="year">Este ano</option>
+                                    <option value="custom">Personalizado</option>
+                                </select>
+                                <i
+                                    class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+                            </div>
+
+                            <div class="flex space-x-2 hidden" id="custom-date-range">
+                                <input type="date" id="start-date"
+                                    class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <span class="flex items-center">a</span>
+                                <input type="date" id="end-date"
+                                    class="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-6">
+                        <!-- Report Filters -->
+                        <div class="mb-6">
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Filtros</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="filter-category" class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                                    <select id="filter-category"
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">Todas categorias</option>
+                                        <!-- Categories will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="filter-status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                    <select id="filter-status"
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="">Todos status</option>
+                                        <option value="active">Ativo</option>
+                                        <option value="inactive">Inativo</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="filter-sort" class="block text-sm font-medium text-gray-700 mb-1">Ordenar por</label>
+                                    <select id="filter-sort"
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="name_asc">Nome (A-Z)</option>
+                                        <option value="name_desc">Nome (Z-A)</option>
+                                        <option value="date_asc">Data (Mais antigo)</option>
+                                        <option value="date_desc">Data (Mais recente)</option>
+                                        <option value="quantity_asc">Quantidade (Menor)</option>
+                                        <option value="quantity_desc">Quantidade (Maior)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Report Preview -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="text-lg font-medium text-gray-800">Pré-visualização</h3>
+                                <div class="flex space-x-2">
+                                    <button id="refresh-preview"
+                                        class="px-3 py-1 border rounded-lg hover:bg-gray-50 flex items-center">
+                                        <i class="fas fa-sync-alt mr-2"></i>
+                                        <span>Atualizar</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full divide-y divide-gray-200">
+                                        <thead class="bg-gray-100">
+                                            <tr>
+                                                <th scope="col"
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Nome</th>
+                                                <th scope="col"
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Categoria</th>
+                                                <th scope="col"
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Quantidade</th>
+                                                <th scope="col"
+                                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="bg-white divide-y divide-gray-200" id="report-preview-body">
+                                            <!-- Preview data will be populated by JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Export Options -->
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Exportar Relatório</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                <button id="export-csv"
+                                    class="bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-file-csv mr-2"></i>
+                                    <span>CSV</span>
+                                </button>
+                                <button id="export-json"
+                                    class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-3 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-file-code mr-2"></i>
+                                    <span>JSON</span>
+                                </button>
+                                <button id="export-xml"
+                                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-file-code mr-2"></i>
+                                    <span>XML</span>
+                                </button>
+                                <button id="export-pdf"
+                                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg flex items-center justify-center">
+                                    <i class="fas fa-file-pdf mr-2"></i>
+                                    <span>PDF</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Reports -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-4 border-b">
+                        <h2 class="text-lg font-semibold text-gray-800">Relatórios Recentes</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Nome</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Tipo</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Data</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Formato</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200" id="recent-reports-body">
+                                <!-- Recent reports will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Toggle sidebar
+        document.getElementById('toggle-sidebar').addEventListener('click', function () {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+            document.querySelector('.main-content').classList.toggle('ml-64');
+            document.querySelector('.main-content').classList.toggle('ml-20');
+
+            const icon = this.querySelector('i');
+            if (document.querySelector('.sidebar').classList.contains('collapsed')) {
+                icon.classList.remove('fa-chevron-left');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-left');
+            }
+        });
+
+        // Global variables
+        let currentReportType = '';
+        let reportData = [];
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function () {
+            loadRecentReports();
+            loadCategories();
+            setupEventListeners();
+        });
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Report type selection
+            document.getElementById('stock-report').addEventListener('click', function () {
+                currentReportType = 'stock';
+                showReportConfiguration('Relatório de Estoque');
+            });
+
+            document.getElementById('sales-report').addEventListener('click', function () {
+                currentReportType = 'sales';
+                showReportConfiguration('Relatório de Vendas');
+            });
+
+            document.getElementById('financial-report').addEventListener('click', function () {
+                currentReportType = 'financial';
+                showReportConfiguration('Relatório Financeiro');
+            });
+
+            // Date range selection
+            document.getElementById('report-period').addEventListener('change', function () {
+                const customRange = document.getElementById('custom-date-range');
+                if (this.value === 'custom') {
+                    customRange.classList.remove('hidden');
+                    // Set default dates (last month)
+                    const endDate = new Date();
+                    const startDate = new Date();
+                    startDate.setMonth(startDate.getMonth() - 1);
+                    
+                    document.getElementById('start-date').valueAsDate = startDate;
+                    document.getElementById('end-date').valueAsDate = endDate;
+                } else {
+                    customRange.classList.add('hidden');
+                }
+                updateReportPreview();
+            });
+
+            // Custom date range
+            document.getElementById('start-date').addEventListener('change', updateReportPreview);
+            document.getElementById('end-date').addEventListener('change', updateReportPreview);
+
+            // Filter changes
+            document.getElementById('filter-category').addEventListener('change', updateReportPreview);
+            document.getElementById('filter-status').addEventListener('change', updateReportPreview);
+            document.getElementById('filter-sort').addEventListener('change', updateReportPreview);
+
+            // Refresh preview
+            document.getElementById('refresh-preview').addEventListener('click', updateReportPreview);
+
+            // Export buttons
+            document.getElementById('export-csv').addEventListener('click', () => exportReport('csv'));
+            document.getElementById('export-json').addEventListener('click', () => exportReport('json'));
+            document.getElementById('export-xml').addEventListener('click', () => exportReport('xml'));
+            document.getElementById('export-pdf').addEventListener('click', () => exportReport('pdf'));
+        }
+
+        // Show report configuration panel
+        function showReportConfiguration(title) {
+            document.getElementById('report-title').textContent = title;
+            document.getElementById('report-configuration').classList.remove('hidden');
+            
+            // Scroll to configuration panel
+            document.getElementById('report-configuration').scrollIntoView({ behavior: 'smooth' });
+            
+            // Load initial preview
+            updateReportPreview();
+        }
+
+        // Update report preview
+        async function updateReportPreview() {
+            try {
+                // Show loading state
+                const previewBody = document.getElementById('report-preview-body');
+                previewBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center">Carregando...</td></tr>';
+                
+                // Get filters
+                const period = document.getElementById('report-period').value;
+                const category = document.getElementById('filter-category').value;
+                const status = document.getElementById('filter-status').value;
+                const sort = document.getElementById('filter-sort').value;
+                
+                let startDate, endDate;
+                
+                if (period === 'custom') {
+                    startDate = document.getElementById('start-date').value;
+                    endDate = document.getElementById('end-date').value;
+                } else {
+                    // Calculate dates based on period
+                    const today = new Date();
+                    endDate = formatDate(today);
+                    
+                    switch (period) {
+                        case 'today':
+                            startDate = endDate;
+                            break;
+                        case 'week':
+                            const lastWeek = new Date(today);
+                            lastWeek.setDate(today.getDate() - 7);
+                            startDate = formatDate(lastWeek);
+                            break;
+                        case 'month':
+                            const lastMonth = new Date(today);
+                            lastMonth.setMonth(today.getMonth() - 1);
+                            startDate = formatDate(lastMonth);
+                            break;
+                        case 'quarter':
+                            const lastQuarter = new Date(today);
+                            lastQuarter.setMonth(today.getMonth() - 3);
+                            startDate = formatDate(lastQuarter);
+                            break;
+                        case 'year':
+                            const lastYear = new Date(today);
+                            lastYear.setFullYear(today.getFullYear() - 1);
+                            startDate = formatDate(lastYear);
+                            break;
+                    }
+                }
+                
+                // Fetch report data from API
+                const response = await fetch('/api/reports/preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: currentReportType,
+                        startDate,
+                        endDate,
+                        category,
+                        status,
+                        sort
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                reportData = data;
+                
+                // Update preview table
+                previewBody.innerHTML = '';
+                
+                if (data.length === 0) {
+                    previewBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center">Nenhum dado encontrado</td></tr>';
+                    return;
+                }
+                
+                // For demo purposes, we'll show a preview with sample data structure
+                // In a real app, you would use the actual data structure from your API
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${item.name || 'N/A'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">${item.category || 'N/A'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">${item.quantity || 'N/A'}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${item.status === 'active' ? 'Ativo' : 'Inativo'}
+                            </span>
+                        </td>
+                    `;
+                    
+                    previewBody.appendChild(row);
+                });
+                
+            } catch (error) {
+                console.error('Error updating report preview:', error);
+                showNotification('Erro ao carregar pré-visualização', 'error');
+                
+                const previewBody = document.getElementById('report-preview-body');
+                previewBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-red-500">Erro ao carregar dados</td></tr>';
+            }
+        }
+
+        // Export report
+        async function exportReport(format) {
+            if (!currentReportType) {
+                showNotification('Selecione um tipo de relatório primeiro', 'warning');
+                return;
+            }
+            
+            if (reportData.length === 0) {
+                showNotification('Nenhum dado para exportar', 'warning');
+                return;
+            }
+            
+            try {
+                // Get filters
+                const period = document.getElementById('report-period').value;
+                const category = document.getElementById('filter-category').value;
+                const status = document.getElementById('filter-status').value;
+                const sort = document.getElementById('filter-sort').value;
+                
+                let startDate, endDate;
+                
+                if (period === 'custom') {
+                    startDate = document.getElementById('start-date').value;
+                    endDate = document.getElementById('end-date').value;
+                } else {
+                    // Calculate dates based on period
+                    const today = new Date();
+                    endDate = formatDate(today);
+                    
+                    switch (period) {
+                        case 'today':
+                            startDate = endDate;
+                            break;
+                        case 'week':
+                            const lastWeek = new Date(today);
+                            lastWeek.setDate(today.getDate() - 7);
+                            startDate = formatDate(lastWeek);
+                            break;
+                        case 'month':
+                            const lastMonth = new Date(today);
+                            lastMonth.setMonth(today.getMonth() - 1);
+                            startDate = formatDate(lastMonth);
+                            break;
+                        case 'quarter':
+                            const lastQuarter = new Date(today);
+                            lastQuarter.setMonth(today.getMonth() - 3);
+                            startDate = formatDate(lastQuarter);
+                            break;
+                        case 'year':
+                            const lastYear = new Date(today);
+                            lastYear.setFullYear(today.getFullYear() - 1);
+                            startDate = formatDate(lastYear);
+                            break;
+                    }
+                }
+                
+                // Call API to generate export
+                const response = await fetch('/api/reports/export', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: currentReportType,
+                        format,
+                        startDate,
+                        endDate,
+                        category,
+                        status,
+                        sort
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Handle different export formats
+                if (format === 'pdf') {
+                    // For PDF, we expect a file download
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `relatorio_${currentReportType}_${new Date().toISOString().slice(0, 10)}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                } else {
+                    // For other formats, we can handle the data directly
+                    const data = await response.json();
+                    
+                    let exportContent = '';
+                    let filename = `relatorio_${currentReportType}_${new Date().toISOString().slice(0, 10)}`;
+                    
+                    switch (format) {
+                        case 'csv':
+                            exportContent = convertToCSV(data);
+                            filename += '.csv';
+                            break;
+                        case 'json':
+                            exportContent = JSON.stringify(data, null, 2);
+                            filename += '.json';
+                            break;
+                        case 'xml':
+                            exportContent = convertToXML(data);
+                            filename += '.xml';
+                            break;
+                    }
+                    
+                    // Create download
+                    const blob = new Blob([exportContent], { type: `text/${format}` });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }
+                
+                // Add to recent reports
+                addToRecentReports(currentReportType, format);
+                showNotification('Relatório exportado com sucesso', 'success');
+                
+            } catch (error) {
+                console.error('Error exporting report:', error);
+                showNotification('Erro ao exportar relatório', 'error');
+            }
+        }
+
+        // Load recent reports
+        async function loadRecentReports() {
+            try {
+                const response = await fetch('/api/reports/recent');
+                const reports = await response.json();
+                
+                const recentReportsBody = document.getElementById('recent-reports-body');
+                recentReportsBody.innerHTML = '';
+                
+                if (reports.length === 0) {
+                    recentReportsBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center">Nenhum relatório recente</td></tr>';
+                    return;
+                }
+                
+                reports.forEach(report => {
+                    const row = document.createElement('tr');
+                    row.className = 'hover:bg-gray-50';
+                    
+                    // Format date
+                    const reportDate = new Date(report.date);
+                    const formattedDate = reportDate.toLocaleDateString('pt-BR');
+                    
+                    // Get icon based on format
+                    let formatIcon, formatColor;
+                    switch (report.format) {
+                        case 'csv':
+                            formatIcon = 'fa-file-csv';
+                            formatColor = 'text-green-600';
+                            break;
+                        case 'json':
+                            formatIcon = 'fa-file-code';
+                            formatColor = 'text-yellow-600';
+                            break;
+                        case 'xml':
+                            formatIcon = 'fa-file-code';
+                            formatColor = 'text-red-600';
+                            break;
+                        case 'pdf':
+                            formatIcon = 'fa-file-pdf';
+                            formatColor = 'text-indigo-600';
+                            break;
+                        default:
+                            formatIcon = 'fa-file';
+                            formatColor = 'text-gray-600';
+                    }
+                    
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">${report.name}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500 capitalize">${report.type}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-500">${formattedDate}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <i class="fas ${formatIcon} ${formatColor}"></i>
+                            <span class="ml-1 text-sm text-gray-500 uppercase">${report.format}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button class="text-indigo-600 hover:text-indigo-900 download-report" data-id="${report.id}">Download</button>
+                        </td>
+                    `;
+                    
+                    recentReportsBody.appendChild(row);
+                });
+                
+                // Add event listeners to download buttons
+                document.querySelectorAll('.download-report').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const reportId = this.getAttribute('data-id');
+                        downloadReport(reportId);
+                    });
+                });
+                
+            } catch (error) {
+                console.error('Error loading recent reports:', error);
+                const recentReportsBody = document.getElementById('recent-reports-body');
+                recentReportsBody.innerHTML = '<tr><td colspan="5" class="px-6 py-4 text-center text-red-500">Erro ao carregar relatórios</td></tr>';
+            }
+        }
+
+        // Add to recent reports
+        async function addToRecentReports(type, format) {
+            try {
+                const reportName = {
+                    stock: 'Relatório de Estoque',
+                    sales: 'Relatório de Vendas',
+                    financial: 'Relatório Financeiro'
+                }[type] || 'Relatório';
+                
+                await fetch('/api/reports/recent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: reportName,
+                        type,
+                        format
+                    })
+                });
+                
+                // Refresh recent reports list
+                loadRecentReports();
+                
+            } catch (error) {
+                console.error('Error adding to recent reports:', error);
+            }
+        }
+
+        // Download report
+        async function downloadReport(reportId) {
+            try {
+                const response = await fetch(`/api/reports/download/${reportId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const blob = await response.blob();
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `relatorio_${reportId}`;
+                
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="?(.+?)"?(;|$)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showNotification('Download iniciado', 'success');
+                
+            } catch (error) {
+                console.error('Error downloading report:', error);
+                showNotification('Erro ao baixar relatório', 'error');
+            }
+        }
+
+        // Load categories for dropdown
+        async function loadCategories() {
+            try {
+                const response = await fetch('/api/products/categories');
+                const categories = await response.json();
+                
+                const categoryFilter = document.getElementById('filter-category');
+                categoryFilter.innerHTML = '<option value="">Todas categorias</option>';
+                
+                categories.forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    categoryFilter.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error loading categories:', error);
+            }
+        }
+
+        // Helper function to format date as YYYY-MM-DD
+        function formatDate(date) {
+            const d = new Date(date);
+            let month = '' + (d.getMonth() + 1);
+            let day = '' + d.getDate();
+            const year = d.getFullYear();
+            
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+            
+            return [year, month, day].join('-');
+        }
+
+        // Helper function to convert data to CSV
+        function convertToCSV(data) {
+            if (!data || data.length === 0) return '';
+            
+            // Get headers
+            const headers = Object.keys(data[0]);
+            
+            // Create CSV content
+            let csv = headers.join(',') + '\n';
+            
+            data.forEach(item => {
+                const row = headers.map(header => {
+                    // Escape quotes and wrap in quotes if contains comma
+                    let value = item[header] !== undefined ? item[header] : '';
+                    value = String(value).replace(/"/g, '""');
+                    if (value.includes(',')) {
+                        value = `"${value}"`;
+                    }
+                    return value;
+                });
+                
+                csv += row.join(',') + '\n';
+            });
+            
+            return csv;
+        }
+
+        // Helper function to convert data to XML
+        function convertToXML(data) {
+            if (!data || data.length === 0) return '<report></report>';
+            
+            let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+            xml += '<report>\n';
+            
+            data.forEach(item => {
+                xml += '  <item>\n';
+                for (const key in item) {
+                    if (item.hasOwnProperty(key)) {
+                        const value = item[key] !== undefined ? item[key] : '';
+                        xml += `    <${key}>${escapeXML(String(value))}</${key}>\n`;
+                    }
+                }
+                xml += '  </item>\n';
+            });
+            
+            xml += '</report>';
+            return xml;
+        }
+
+        // Helper function to escape XML special characters
+        function escapeXML(str) {
+            return str.replace(/&/g, '&amp;')
+                     .replace(/</g, '&lt;')
+                     .replace(/>/g, '&gt;')
+                     .replace(/"/g, '&quot;')
+                     .replace(/'/g, '&apos;');
+        }
+
+        // Show notification
+        function showNotification(message, type = 'info') {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500',
+                warning: 'bg-yellow-500'
+            };
+
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                info: 'fa-info-circle',
+                warning: 'fa-exclamation-triangle'
+            };
+
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white flex items-center notification ${colors[type]}`;
+            notification.innerHTML = `
+                <i class="fas ${icons[type]} mr-2"></i>
+                ${message}
+            `;
+
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.classList.add('opacity-0', 'translate-x-4', 'transition');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+
+</html>
