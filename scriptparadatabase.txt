@@ -29,6 +29,13 @@ CREATE TABLE IF NOT EXISTS `orders` (
   CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
+-- Alterar tabela orders para funcionar com vendas
+ALTER TABLE orders
+ADD COLUMN channel ENUM('whatsapp', 'ifood', 'balcao') NOT NULL AFTER status,
+ADD COLUMN whatsapp_number VARCHAR(20) DEFAULT NULL,
+ADD COLUMN ifood_order VARCHAR(20) DEFAULT NULL,
+ADD COLUMN attendant VARCHAR(50) DEFAULT NULL;
+
 
 
 

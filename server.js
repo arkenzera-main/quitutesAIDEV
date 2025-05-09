@@ -410,7 +410,7 @@ app.get('/api/products', async (req, res) => {
     try {
         const { page = 1, limit = 10, category, stock, search } = req.query;
         const offset = (page - 1) * limit;
-        
+
         let query = `
             SELECT *, 
                 CASE 
@@ -421,7 +421,7 @@ app.get('/api/products', async (req, res) => {
             FROM products 
             WHERE 1=1
         `;
-        
+
         const params = [];
         const countParams = [];
 
@@ -449,7 +449,7 @@ app.get('/api/products', async (req, res) => {
 
         // Query principal com paginação
         const [products] = await pool.query(
-            `${query} ORDER BY name LIMIT ? OFFSET ?`, 
+            `${query} ORDER BY name LIMIT ? OFFSET ?`,
             [...params, parseInt(limit), parseInt(offset)]
         );
 
@@ -490,7 +490,7 @@ app.get('/api/products', async (req, res) => {
 app.get('/api/products/:id', async (req, res) => {
     try {
         const [rows] = await pool.query(
-            'SELECT * FROM products WHERE id = ?', 
+            'SELECT * FROM products WHERE id = ?',
             [req.params.id]
         );
 
@@ -509,12 +509,12 @@ app.get('/api/products/:id', async (req, res) => {
 app.post('/api/products', async (req, res) => {
     try {
         const { name, category, current_stock, minimum_stock, unit, description } = req.body;
-        
+
         // Validação básica
         if (!name || !category || current_stock === undefined || !minimum_stock || !unit) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Campos obrigatórios faltando' 
+            return res.status(400).json({
+                success: false,
+                error: 'Campos obrigatórios faltando'
             });
         }
 
@@ -525,8 +525,8 @@ app.post('/api/products', async (req, res) => {
             [name, category, current_stock, minimum_stock, unit, description]
         );
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             productId: result.insertId,
             message: 'Produto criado com sucesso'
         });
@@ -550,9 +550,9 @@ app.put('/api/products/:id', async (req, res) => {
         );
 
         if (check.length === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Produto não encontrado' 
+            return res.status(404).json({
+                success: false,
+                error: 'Produto não encontrado'
             });
         }
 
@@ -569,9 +569,9 @@ app.put('/api/products/:id', async (req, res) => {
             [name, category, current_stock, minimum_stock, unit, description, productId]
         );
 
-        res.json({ 
-            success: true, 
-            message: 'Produto atualizado com sucesso' 
+        res.json({
+            success: true,
+            message: 'Produto atualizado com sucesso'
         });
 
     } catch (error) {
@@ -589,15 +589,15 @@ app.delete('/api/products/:id', async (req, res) => {
         );
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Produto não encontrado' 
+            return res.status(404).json({
+                success: false,
+                error: 'Produto não encontrado'
             });
         }
 
-        res.json({ 
-            success: true, 
-            message: 'Produto excluído com sucesso' 
+        res.json({
+            success: true,
+            message: 'Produto excluído com sucesso'
         });
 
     } catch (error) {
@@ -614,7 +614,7 @@ app.get('/api/products/categories', async (req, res) => {
             'SELECT DISTINCT category as name FROM products ORDER BY category'
         );
         connection.release();
-        
+
         // Extrai apenas os nomes das categorias
         const categoryNames = categories.map(c => c.name);
         res.json(categoryNames);
@@ -1144,7 +1144,7 @@ app.post('/api/tasks', async (req, res) => {
 
         // Debug para crud create da task
         console.log('Inserindo no banco de dados:', {
-            title, description, due_date, priority, status, 
+            title, description, due_date, priority, status,
             category_id, reminder_minutes
         });
 
@@ -1158,7 +1158,7 @@ app.post('/api/tasks', async (req, res) => {
 
         // Debug para verificar o ID da tarefa inserida
         console.log('Tarefa inserida, ID:', result.insertId);
-        
+
 
         // Recupera a tarefa com JOIN para incluir dados da categoria
         const [task] = await connection.query(`
@@ -1293,6 +1293,236 @@ app.get('/api/tasks/summary', async (req, res) => {
 
 // END TAREFAS .HTML ----------------------------------------------------------------------------------------------------------------------------------------
 
+// SERVER.JS - VENDAS.HTML ----------------------------------------------------------------------------------------------------------------------------------------
+
+// Rotas para Vendas
+// CRUD READ
+app.get('/api/sales', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        const [orders] = await connection.query(`
+            SELECT o.*, c.name as customer_name,
+                o.channel,
+                o.whatsapp_number,
+                o.ifood_order,
+                o.attendant,
+                COUNT(oi.id) as items_count
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id
+            LEFT JOIN order_items oi ON o.id = oi.order_id
+            GROUP BY o.id
+            ORDER BY o.order_date DESC
+        `);
+
+        const [items] = await connection.query(`
+            SELECT oi.order_id, p.name as product, oi.quantity, oi.unit_price
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+        `);
+
+        connection.release();
+
+        const sales = orders.map(order => ({
+            ...order,
+            items: items.filter(item => item.order_id === order.id).map(item => ({
+                product: item.product,
+                quantity: item.quantity,
+                valor: item.unit_price
+            })),
+            order_date: new Date(order.order_date).toISOString()
+        }));
+
+        res.json(sales);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// CRUD READ - Detalhes da venda
+app.get('/api/sales/summary', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        const [today] = await connection.query(`
+            SELECT IFNULL(SUM(total_amount), 0) as total
+            FROM orders
+            WHERE DATE(order_date) = CURDATE()
+        `);
+
+        const [week] = await connection.query(`
+            SELECT IFNULL(SUM(total_amount), 0) as total
+            FROM orders
+            WHERE YEARWEEK(order_date) = YEARWEEK(CURDATE())
+        `);
+
+        const [month] = await connection.query(`
+            SELECT IFNULL(SUM(total_amount), 0) as total
+            FROM orders
+            WHERE MONTH(order_date) = MONTH(CURDATE())
+            AND YEAR(order_date) = YEAR(CURDATE())
+        `);
+
+        const [pending] = await connection.query(`
+            SELECT COUNT(*) as count
+            FROM orders
+            WHERE status IN ('pending', 'preparing')
+        `);
+
+        connection.release();
+
+        // Garante que os valores sejam números
+        res.json({
+            today: parseFloat(today[0].total) || 0,
+            week: parseFloat(week[0].total) || 0,
+            month: parseFloat(month[0].total) || 0,
+            pending: parseInt(pending[0].count) || 0
+        });
+    } catch (error) {
+        console.error(error);
+        // Retorna valores padrão em caso de erro
+        res.json({
+            today: 0,
+            week: 0,
+            month: 0,
+            pending: 0
+        });
+    }
+});
+
+// CRUD CREATE
+app.post('/api/sales', async (req, res) => {
+    try {
+        const { customer, channel, items, total, status, observations, channelData } = req.body;
+        const connection = await pool.getConnection();
+
+        await connection.beginTransaction();
+
+        // Cria ou busca cliente
+        const [customerResult] = await connection.query(
+            'INSERT INTO customers (name) VALUES (?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)',
+            [customer]
+        );
+
+        // Cria a ordem
+        const [orderResult] = await connection.query(
+            `INSERT INTO orders (
+                customer_id, 
+                total_amount, 
+                status, 
+                notes,
+                channel,
+                whatsapp_number,
+                ifood_order,
+                attendant
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                customerResult.insertId,
+                total,
+                status,
+                observations,
+                channel,
+                channelData.whatsapp || null,
+                channelData.ifood || null,
+                channelData.attendant || null
+            ]
+        );
+
+        // Insere os itens
+        for (const item of items) {
+            const [product] = await connection.query(
+                'SELECT id FROM products WHERE name = ?',
+                [item.product]
+            );
+
+            if (product.length > 0) {
+                await connection.query(
+                    'INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)',
+                    [orderResult.insertId, product[0].id, item.quantity, item.valor]
+                );
+            }
+        }
+
+        await connection.commit();
+        connection.release();
+
+        res.json({ success: true, id: orderResult.insertId });
+    } catch (error) {
+        await connection.rollback();
+        connection.release();
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// Rota para buscar uma venda específica
+app.get('/api/sales/:id', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        const [order] = await connection.query(`
+            SELECT o.*, c.name as customer_name
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id
+            WHERE o.id = ?
+        `, [req.params.id]);
+
+        if (order.length === 0) {
+            connection.release();
+            return res.status(404).json({ error: 'Venda não encontrada' });
+        }
+
+        const [items] = await connection.query(`
+            SELECT p.name as product, oi.quantity, oi.unit_price as valor
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
+        `, [req.params.id]);
+
+        connection.release();
+
+        res.json({
+            ...order[0],
+            itens: items,
+            valorTotal: order[0].total_amount,
+            data: order[0].order_date.toISOString()
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// Rota para deletar uma venda
+app.delete('/api/sales/:id', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        await connection.query('DELETE FROM order_items WHERE order_id = ?', [req.params.id]);
+        await connection.query('DELETE FROM orders WHERE id = ?', [req.params.id]);
+
+        await connection.commit();
+        connection.release();
+
+        res.json({ success: true });
+    } catch (error) {
+        await connection.rollback();
+        connection.release();
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+
+// END VENDAS .HTML ----------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
 
 // SERVER.JS - RELATORIOS.HTML ----------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1304,8 +1534,8 @@ app.post('/api/reports/preview', async (req, res) => {
         const { type, startDate, endDate, category, status, sort } = req.body;
         let query;
         const params = [];
-        
-        switch(type) {
+
+        switch (type) {
             case 'stock':
                 query = `
                     SELECT 
@@ -1319,13 +1549,13 @@ app.post('/api/reports/preview', async (req, res) => {
                     FROM products p
                     WHERE 1=1
                 `;
-                
+
                 if (category) {
                     query += ' AND p.category = ?';
                     params.push(category);
                 }
                 if (status) {
-                    query += status === 'active' 
+                    query += status === 'active'
                         ? ' AND p.current_stock > 0'
                         : ' AND p.current_stock = 0';
                 }
@@ -1391,30 +1621,30 @@ app.post('/api/reports/export', async (req, res) => {
     try {
         const { type, format, startDate, endDate, category, status, sort } = req.body;
         const connection = await pool.getConnection();
-        
+
         const [reportResult] = await connection.query(
             `INSERT INTO reports 
             (name, type, format, parameters)
             VALUES (?, ?, ?, ?)`,
-            [`Relatório de ${type}`, type, format, 
-             JSON.stringify({ startDate, endDate, category, status, sort })]
+            [`Relatório de ${type}`, type, format,
+            JSON.stringify({ startDate, endDate, category, status, sort })]
         );
 
         const reportId = reportResult.insertId;
         const fileName = `relatorio_${reportId}.${format}`;
-        
+
         await connection.query(
             `UPDATE reports SET file_path = ? WHERE id = ?`,
             [fileName, reportId]
         );
-        
+
         connection.release();
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             reportId,
             fileName,
-            message: 'Relatório exportado com sucesso' 
+            message: 'Relatório exportado com sucesso'
         });
 
     } catch (error) {
@@ -1433,7 +1663,7 @@ app.get('/api/reports/recent', async (req, res) => {
              LIMIT 10`
         );
         connection.release();
-        
+
         // Garantir que sempre retornamos um array
         res.json(reports || []);
     } catch (error) {
@@ -1457,7 +1687,7 @@ app.get('/api/reports/download/:id', async (req, res) => {
 
         const report = reports[0];
         const filePath = path.join(__dirname, 'reports', report.file_path);
-        
+
         res.download(filePath, report.file_path, (err) => {
             if (err) {
                 console.error('Erro no download:', err);
