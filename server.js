@@ -257,15 +257,21 @@ async function initializeDatabase() {
             )`);
 
         await connection.query(`
-            CREATE TABLE IF NOT EXISTS orders (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                order_number VARCHAR(20) NOT NULL,
-                customer_id INT NOT NULL,
-                total_amount DECIMAL(10,2) NOT NULL,
-                status ENUM('pending', 'paid', 'preparing', 'on_delivery', 'delivered') DEFAULT 'pending',
-                order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (customer_id) REFERENCES customers(id)
-            )`);
+        CREATE TABLE IF NOT EXISTS orders (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            order_number VARCHAR(20) NOT NULL,
+            customer_id INT NOT NULL,
+            total_amount DECIMAL(10,2) NOT NULL,
+            status ENUM('pending', 'paid', 'preparing', 'on_delivery', 'delivered') DEFAULT 'pending',
+            order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            notes TEXT DEFAULT NULL,
+            channel ENUM('whatsapp', 'ifood', 'balcao') NOT NULL,
+            whatsapp_number VARCHAR(20) DEFAULT NULL,
+            ifood_order VARCHAR(20) DEFAULT NULL,
+            attendant VARCHAR(50) DEFAULT NULL,
+            
+            FOREIGN KEY (customer_id) REFERENCES customers(id)
+    )`);
 
         await connection.query(`
             CREATE TABLE IF NOT EXISTS order_items (
@@ -403,61 +409,54 @@ CREATE TABLE `products` (
 
 
 
-// [1] Rota GET para listar produtos com paginação e filtros
+// [1] Rota GET para listar produtos com paginação e filtros (refatorada)
 app.get('/api/products', async (req, res) => {
     try {
         const { page = 1, limit = 10, category, stock, search } = req.query;
-        const offset = (page - 1) * limit;
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const params = [];
+        const filters = [];
 
-        let query = `
+        if (category) {
+            filters.push('category = ?');
+            params.push(category);
+        }
+
+        if (stock === 'low') {
+            filters.push('current_stock < minimum_stock AND current_stock > 0');
+        } else if (stock === 'out') {
+            filters.push('current_stock = 0');
+        } else if (stock === 'normal') {
+            filters.push('current_stock >= minimum_stock');
+        }
+
+        if (search) {
+            filters.push('(name LIKE ? OR description LIKE ?)');
+            const searchTerm = `%${search}%`;
+            params.push(searchTerm, searchTerm);
+        }
+
+        const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
+
+        const [products] = await pool.query(`
             SELECT *, 
                 CASE 
                     WHEN current_stock = 0 THEN 'out'
                     WHEN current_stock < minimum_stock THEN 'low' 
                     ELSE 'normal'
                 END AS stock_status
-            FROM products 
-            WHERE 1=1
-        `;
+            FROM products
+            ${whereClause}
+            ORDER BY name
+            LIMIT ? OFFSET ?
+        `, [...params, parseInt(limit), offset]);
 
-        const params = [];
-        const countParams = [];
+        const [countResult] = await pool.query(`
+            SELECT COUNT(*) AS total
+            FROM products
+            ${whereClause}
+        `, params);
 
-        // Filtros
-        if (category) {
-            query += ' AND category = ?';
-            params.push(category);
-            countParams.push(category);
-        }
-
-        if (stock === 'low') {
-            query += ' AND current_stock < minimum_stock AND current_stock > 0';
-        } else if (stock === 'out') {
-            query += ' AND current_stock = 0';
-        } else if (stock === 'normal') {
-            query += ' AND current_stock >= minimum_stock';
-        }
-
-        if (search) {
-            query += ' AND (name LIKE ? OR description LIKE ?)';
-            const searchTerm = `%${search}%`;
-            params.push(searchTerm, searchTerm);
-            countParams.push(searchTerm, searchTerm);
-        }
-
-        // Query principal com paginação
-        const [products] = await pool.query(
-            `${query} ORDER BY name LIMIT ? OFFSET ?`,
-            [...params, parseInt(limit), parseInt(offset)]
-        );
-
-        // Query para total de registros
-        const [countResult] = await pool.query(
-            `SELECT COUNT(*) AS total FROM products WHERE 1=1 ${query.split('WHERE 1=1')[1]}`,
-            countParams
-        );
-
-        // Estatísticas
         const [stats] = await pool.query(`
             SELECT 
                 COUNT(*) AS total,
@@ -474,8 +473,7 @@ app.get('/api/products', async (req, res) => {
                 total: stats[0].total,
                 low: stats[0].low_stock,
                 out: stats[0].out_of_stock
-            },
-            categories: await getCategories()
+            }
         });
 
     } catch (error) {
@@ -488,7 +486,7 @@ app.get('/api/products', async (req, res) => {
 app.get('/api/products/:id', async (req, res) => {
     try {
         const [rows] = await pool.query(
-            'SELECT * FROM products WHERE id = ?',
+            'SELECT * FROM products WHERE id = ?', 
             [req.params.id]
         );
 
@@ -503,16 +501,17 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
+
 // [3] Rota POST para criar novo produto
 app.post('/api/products', async (req, res) => {
     try {
         const { name, category, current_stock, minimum_stock, unit, description } = req.body;
-
+        
         // Validação básica
         if (!name || !category || current_stock === undefined || !minimum_stock || !unit) {
-            return res.status(400).json({
-                success: false,
-                error: 'Campos obrigatórios faltando'
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Campos obrigatórios faltando' 
             });
         }
 
@@ -523,8 +522,8 @@ app.post('/api/products', async (req, res) => {
             [name, category, current_stock, minimum_stock, unit, description]
         );
 
-        res.json({
-            success: true,
+        res.json({ 
+            success: true, 
             productId: result.insertId,
             message: 'Produto criado com sucesso'
         });
@@ -548,9 +547,9 @@ app.put('/api/products/:id', async (req, res) => {
         );
 
         if (check.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Produto não encontrado'
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Produto não encontrado' 
             });
         }
 
@@ -567,9 +566,9 @@ app.put('/api/products/:id', async (req, res) => {
             [name, category, current_stock, minimum_stock, unit, description, productId]
         );
 
-        res.json({
-            success: true,
-            message: 'Produto atualizado com sucesso'
+        res.json({ 
+            success: true, 
+            message: 'Produto atualizado com sucesso' 
         });
 
     } catch (error) {
@@ -577,6 +576,7 @@ app.put('/api/products/:id', async (req, res) => {
         res.status(500).json({ success: false, error: 'Erro ao atualizar produto' });
     }
 });
+
 
 // [5] Rota DELETE para remover produto
 app.delete('/api/products/:id', async (req, res) => {
@@ -587,15 +587,15 @@ app.delete('/api/products/:id', async (req, res) => {
         );
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Produto não encontrado'
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Produto não encontrado' 
             });
         }
 
-        res.json({
-            success: true,
-            message: 'Produto excluído com sucesso'
+        res.json({ 
+            success: true, 
+            message: 'Produto excluído com sucesso' 
         });
 
     } catch (error) {
@@ -603,32 +603,6 @@ app.delete('/api/products/:id', async (req, res) => {
         res.status(500).json({ success: false, error: 'Erro ao excluir produto' });
     }
 });
-
-// [6] Rota GET para listar categorias
-app.get('/api/products/categories', async (req, res) => {
-    try {
-        const connection = await pool.getConnection();
-        const [categories] = await connection.query(
-            'SELECT DISTINCT category as name FROM products ORDER BY category'
-        );
-        connection.release();
-
-        // Extrai apenas os nomes das categorias
-        const categoryNames = categories.map(c => c.name);
-        res.json(categoryNames);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao buscar categorias' });
-    }
-});
-
-// Função auxiliar para obter categorias
-async function getCategories() {
-    const [categories] = await pool.query(
-        'SELECT DISTINCT category FROM products ORDER BY category'
-    );
-    return categories.map(c => c.category);
-}
 
 
 
@@ -1555,21 +1529,22 @@ app.get('/api/sales/summary', async (req, res) => {
     }
 });
 
-// CRUD CREATE
+// CRUD CREATE - Rota corrigida
 app.post('/api/sales', async (req, res) => {
+    let connection;
     try {
         const { customer, channel, items, total, status, observations, channelData } = req.body;
-        const connection = await pool.getConnection();
-
+        connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        // Cria ou busca cliente
+        // 1. Criar ou buscar cliente
         const [customerResult] = await connection.query(
-            'INSERT INTO customers (name) VALUES (?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)',
+            `INSERT INTO customers (name) VALUES (?) 
+             ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)`,
             [customer]
         );
 
-        // Cria a ordem
+        // 2. Criar a ordem com todos os campos necessários
         const [orderResult] = await connection.query(
             `INSERT INTO orders (
                 customer_id, 
@@ -1585,42 +1560,54 @@ app.post('/api/sales', async (req, res) => {
                 customerResult.insertId,
                 total,
                 status,
-                observations,
+                observations || null, // Corrigido campo notes
                 channel,
-                channelData.whatsapp || null,
-                channelData.ifood || null,
-                channelData.attendant || null
+                channelData?.whatsapp || null,
+                channelData?.ifood || null,
+                channelData?.attendant || null
             ]
         );
 
-        // Insere os itens
+        // 3. Inserir itens com validação de produto
         for (const item of items) {
             const [product] = await connection.query(
-                'SELECT id FROM products WHERE name = ?',
+                `SELECT id FROM products 
+                 WHERE name = ? LIMIT 1`,
                 [item.product]
             );
 
             if (product.length > 0) {
                 await connection.query(
-                    'INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)',
+                    `INSERT INTO order_items 
+                     (order_id, product_id, quantity, unit_price)
+                     VALUES (?, ?, ?, ?)`,
                     [orderResult.insertId, product[0].id, item.quantity, item.valor]
                 );
             }
         }
 
         await connection.commit();
-        connection.release();
+        res.json({ 
+            success: true, 
+            id: orderResult.insertId,
+            message: 'Venda registrada com sucesso!'
+        });
 
-        res.json({ success: true, id: orderResult.insertId });
     } catch (error) {
-        await connection.rollback();
-        connection.release();
-        console.error(error);
-        res.status(500).json({ error: 'Database error' });
+        if (connection) {
+            await connection.rollback();
+            console.error('Rollback executado devido a erro:', error);
+        }
+        res.status(500).json({ 
+            error: 'Erro ao processar venda',
+            details: error.message
+        });
+    } finally {
+        if (connection) connection.release();
     }
 });
 
-// Rota para buscar uma venda específica
+// CRUD READ Rota para buscar uma venda específica -- É NECESSARIO AINDA???
 app.get('/api/sales/:id', async (req, res) => {
     try {
         const connection = await pool.getConnection();
@@ -1657,6 +1644,47 @@ app.get('/api/sales/:id', async (req, res) => {
         res.status(500).json({ error: 'Database error' });
     }
 });
+
+
+// CRUD UPDATE 
+app.put('/api/sales/:id', async (req, res) => {
+    let connection;
+    try {
+        const { id } = req.params;
+        const { status, observations } = req.body;
+        connection = await pool.getConnection();
+
+        await connection.query(
+            `UPDATE orders SET
+                status = ?,
+                notes = ?
+             WHERE id = ?`,
+            [status, observations, id]
+        );
+
+        res.json({ 
+            success: true,
+            message: 'Venda atualizada com sucesso!'
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 
+            error: 'Erro ao atualizar venda',
+            details: error.message
+        });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+
+
+
+
+
+
+
 
 // Rota para deletar uma venda
 app.delete('/api/sales/:id', async (req, res) => {

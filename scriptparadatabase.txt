@@ -16,26 +16,22 @@ CREATE TABLE IF NOT EXISTS `customers` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
--- Criar tabela de pedidos
-CREATE TABLE IF NOT EXISTS `orders` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `order_number` VARCHAR(20) NOT NULL,
-  `customer_id` INT(11) NOT NULL,
-  `total_amount` DECIMAL(10,2) NOT NULL,
-  `status` ENUM('pending','paid','preparing','on_delivery','delivered') DEFAULT 'pending',
-  `order_date` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `customer_id` (`customer_id`),
-  CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
-
--- Alterar tabela orders para funcionar com vendas
-ALTER TABLE orders
-ADD COLUMN channel ENUM('whatsapp', 'ifood', 'balcao') NOT NULL AFTER status,
-ADD COLUMN whatsapp_number VARCHAR(20) DEFAULT NULL,
-ADD COLUMN ifood_order VARCHAR(20) DEFAULT NULL,
-ADD COLUMN attendant VARCHAR(50) DEFAULT NULL;
-
+-- Criar tabela de pedidos ////////// Essa tabela é também usada para vendas.html
+CREATE TABLE IF NOT EXISTS orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        order_number VARCHAR(20) NOT NULL,
+        customer_id INT NOT NULL,
+        total_amount DECIMAL(10,2) NOT NULL,
+        status ENUM('pending', 'paid', 'preparing', 'on_delivery', 'delivered') DEFAULT 'pending',
+        order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        notes TEXT DEFAULT NULL,
+        channel ENUM('whatsapp', 'ifood', 'balcao') NOT NULL,
+        whatsapp_number VARCHAR(20) DEFAULT NULL,
+        ifood_order VARCHAR(20) DEFAULT NULL,
+        attendant VARCHAR(50) DEFAULT NULL,
+        
+        FOREIGN KEY (customer_id) REFERENCES customers(id),
+    )`
 
 
 
@@ -161,6 +157,20 @@ CREATE TABLE IF NOT EXISTS financial_transactions (
     transaction_date DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- VENDAS.HTML -----------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
 
 -- RELATORIOS.HTML -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS reports (

@@ -196,7 +196,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-500">Vendas Hoje</p>
-                                <h3 class="text-2xl font-semibold">R$ 0,00</h3>
+                                <h3 id="vendas-hoje" class="text-2xl font-semibold">R$ 0,00</h3>
                             </div>
                             <div class="bg-green-100 p-3 rounded-full">
                                 <i class="fas fa-calendar-day text-green-600"></i>
@@ -207,7 +207,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-500">Vendas Semana</p>
-                                <h3 class="text-2xl font-semibold">R$ 0,00</h3>
+                                <h3 id="vendas-semana" class="text-2xl font-semibold">R$ 0,00</h3>
                             </div>
                             <div class="bg-blue-100 p-3 rounded-full">
                                 <i class="fas fa-calendar-week text-blue-600"></i>
@@ -218,7 +218,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-500">Vendas Mês</p>
-                                <h3 class="text-2xl font-semibold">R$ 0,00</h3>
+                                <h3 id="vendas-mes" class="text-2xl font-semibold">R$ 0,00</h3>
                             </div>
                             <div class="bg-indigo-100 p-3 rounded-full">
                                 <i class="fas fa-calendar-alt text-indigo-600"></i>
@@ -229,7 +229,7 @@
                         <div class="flex items-center justify-between">
                             <div>
                                 <p class="text-sm font-medium text-gray-500">Pedidos Pendentes</p>
-                                <h3 class="text-2xl font-semibold">0</h3>
+                                <h3 id="pedidos-pendentes" class="text-2xl font-semibold">0</h3>
                             </div>
                             <div class="bg-yellow-100 p-3 rounded-full">
                                 <i class="fas fa-clock text-yellow-600"></i>
@@ -411,13 +411,6 @@
                                 <i class="fas fa-store text-indigo-600 text-xl mr-2"></i>
                                 <h4 class="font-medium text-indigo-800">Venda no Balcão</h4>
                             </div>
-                            <div class="mt-2">
-                                <label for="balcao-attendant"
-                                    class="block text-sm font-medium text-gray-700">Atendente</label>
-                                <input type="text" id="balcao-attendant"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                    placeholder="Nome do atendente">
-                            </div>
                         </div>
 
                         <!-- Common Fields -->
@@ -559,6 +552,13 @@
                     month: summary?.month || 0,
                     pending: summary?.pending || 0
                 });
+                if (summary) {
+                    document.getElementById('vendas-hoje').textContent = `R$ ${summary.today.toFixed(2).replace('.', ',')}`;
+                    document.getElementById('vendas-semana').textContent = `R$ ${summary.week.toFixed(2).replace('.', ',')}`;
+                    document.getElementById('vendas-mes').textContent = `R$ ${summary.month.toFixed(2).replace('.', ',')}`;
+                    document.getElementById('pedidos-pendentes').textContent = summary.pending;
+                }
+
             } catch (error) {
                 console.error('Erro ao carregar dados:', error);
                 mostrarMensagem(error.message, 'error');
@@ -575,27 +575,27 @@
         }
 
         function atualizarResumo(summary) {
-            const formatCurrency = (value) => {
-                return `R$ ${typeof value === 'number' ? value.toFixed(2).replace('.', ',') : '0,00'}`;
-            };
+            const formatarMoeda = (valor) => `R$ ${valor.toFixed(2).replace('.', ',')}`;
 
-            const elements = document.querySelectorAll('.bg-white.rounded-xl.shadow-sm h3');
-
-            if (elements.length >= 4) {
-                elements[0].textContent = formatCurrency(summary.today);
-                elements[1].textContent = formatCurrency(summary.week);
-                elements[2].textContent = formatCurrency(summary.month);
-                elements[3].textContent = summary.pending || 0;
-            }
+            document.getElementById('vendas-hoje').textContent = formatarMoeda(summary.today);
+            document.getElementById('vendas-semana').textContent = formatarMoeda(summary.week);
+            document.getElementById('vendas-mes').textContent = formatarMoeda(summary.month);
+            document.getElementById('pedidos-pendentes').textContent = summary.pending;
         }
 
-        // Update summary
-        function atualizarResumo() {
-            // In a real app, this would calculate actual values
-            document.querySelectorAll('.bg-white.rounded-xl.shadow-sm h3')[0].textContent = 'R$ 218,00';
-            document.querySelectorAll('.bg-white.rounded-xl.shadow-sm h3')[1].textContent = 'R$ 530,00';
-            document.querySelectorAll('.bg-white.rounded-xl.shadow-sm h3')[2].textContent = 'R$ 2.150,00';
-            document.querySelectorAll('.bg-white.rounded-xl.shadow-sm h3')[3].textContent = '1';
+        // Modifique a função atualizarResumo():
+        function atualizarResumo(summary) {
+            document.getElementById('vendas-hoje').textContent =
+                `R$ ${summary.today.toFixed(2).replace('.', ',')}`;
+
+            document.getElementById('vendas-semana').textContent =
+                `R$ ${summary.week.toFixed(2).replace('.', ',')}`;
+
+            document.getElementById('vendas-mes').textContent =
+                `R$ ${summary.month.toFixed(2).replace('.', ',')}`;
+
+            document.getElementById('pedidos-pendentes').textContent =
+                summary.pending;
         }
 
         // Render sales table
@@ -666,30 +666,19 @@
                         break;
                 }
 
-                // Format status
+                // Modifique a seção de status para:
                 let statusColor, statusText;
-                switch (venda.status) {
-                    case 'pendente':
-                        statusColor = 'bg-yellow-100 text-yellow-800';
-                        statusText = 'Pendente';
-                        break;
-                    case 'preparo':
-                        statusColor = 'bg-blue-100 text-blue-800';
-                        statusText = 'Em preparo';
-                        break;
-                    case 'pronto':
-                        statusColor = 'bg-purple-100 text-purple-800';
-                        statusText = 'Pronto';
-                        break;
-                    case 'entregue':
-                        statusColor = 'bg-green-100 text-green-800';
-                        statusText = 'Entregue';
-                        break;
-                    case 'cancelado':
-                        statusColor = 'bg-red-100 text-red-800';
-                        statusText = 'Cancelado';
-                        break;
-                }
+                const statusMap = {
+                    'pendente': { text: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
+                    'preparo': { text: 'Em Preparo', color: 'bg-blue-100 text-blue-800' },
+                    'pronto': { text: 'Pronto', color: 'bg-purple-100 text-purple-800' },
+                    'entregue': { text: 'Entregue', color: 'bg-green-100 text-green-800' },
+                    'cancelado': { text: 'Cancelado', color: 'bg-red-100 text-red-800' }
+                };
+
+                const statusInfo = statusMap[venda.status] || { text: 'Desconhecido', color: 'bg-gray-100 text-gray-800' };
+                statusText = statusInfo.text;
+                statusColor = statusInfo.color;
 
                 // Format items
                 const items = venda.items || venda.itens || [];
@@ -803,6 +792,13 @@
             `;
 
             container.appendChild(row);
+
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.addEventListener('input', calculateTotal);
+            });
+
+            calculateTotal(); // Chame imediatamente após adicionar
         }
 
         // Remove item row from sale form
@@ -920,7 +916,6 @@
                     formData.channelData.ifood = document.getElementById('ifood-order').value;
                     break;
                 case 'balcao':
-                    formData.channelData.attendant = document.getElementById('balcao-attendant').value;
                     break;
             }
 
