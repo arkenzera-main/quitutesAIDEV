@@ -1,5 +1,3 @@
-// Create a new file named server.js and add this code:
-
 const express = require('express');
 const mysql = require('mysql2/promise');
 const cors = require('cors');
@@ -7,7 +5,7 @@ const app = express();
 const path = require('path');
 const port = 3000;
 
-// Database configuration
+// Configuração do banco de dados
 const dbConfig = {
     host: 'localhost',
     user: 'root',
@@ -15,7 +13,7 @@ const dbConfig = {
     database: 'quitutes_ai'
 };
 
-// Enable CORS
+// Habilita o CORS para permitir requisições de outros domínios
 
 app.use(cors({
     origin: 'http://localhost:3000', // ou seu domínio
@@ -1319,6 +1317,10 @@ app.get('/api/transactions', async (req, res) => {
         if (start_date && end_date) {
             query += ' AND transaction_date BETWEEN ? AND ?';
             params.push(start_date, end_date);
+        } else {
+            // Adicione validação para datas inválidas
+            if (start_date) params.push(start_date);
+            if (end_date) params.push(end_date);
         }
 
         if (type) {
@@ -1332,29 +1334,21 @@ app.get('/api/transactions', async (req, res) => {
         }
 
         // Ordenação
-        switch(order) {
-            case 'data-asc':
-                query += ' ORDER BY transaction_date ASC';
-                break;
-            case 'data-desc':
-                query += ' ORDER BY transaction_date DESC';
-                break;
-            case 'valor-asc':
-                query += ' ORDER BY amount ASC';
-                break;
-            case 'valor-desc':
-                query += ' ORDER BY amount DESC';
-                break;
-            default:
-                query += ' ORDER BY transaction_date DESC';
-        }
+        const orderBy = {
+            'data-asc': 'transaction_date ASC',
+            'data-desc': 'transaction_date DESC',
+            'valor-asc': 'amount ASC',
+            'valor-desc': 'amount DESC'
+        };
+
+        query += ' ORDER BY ' + (orderBy[order] || 'transaction_date DESC');
 
         const [transactions] = await pool.query(query, params);
-        
+
         res.json(transactions.map(t => ({
             ...t,
-            amount: parseFloat(t.amount)
-        }));
+            amount: parseFloat(t.amount)  // Corrigido o parêntese faltante
+        }))); // Fechamento corrigido aqui
 
     } catch (error) {
         console.error('Erro em /api/transactions:', error);
@@ -1400,7 +1394,7 @@ app.get('/api/finances/summary', async (req, res) => {
 app.post('/api/transactions', async (req, res) => {
     try {
         const { description, amount, date, type, category } = req.body;
-        
+
         const [result] = await pool.query(
             `INSERT INTO financial_transactions 
             (description, amount, transaction_date, type, category)
@@ -1422,7 +1416,7 @@ app.post('/api/transactions', async (req, res) => {
 app.put('/api/transactions/:id', async (req, res) => {
     try {
         const { description, amount, date, type, category } = req.body;
-        
+
         await pool.query(
             `UPDATE financial_transactions SET
                 description = ?,
@@ -1878,19 +1872,19 @@ app.get('/api/reports/download/:id', async (req, res) => {
 app.get('/api/sustainability/stats', async (req, res) => {
     try {
         const connection = await pool.getConnection();
-        
+
         // Total de óleo reciclado
         const [oilResult] = await connection.query(
             'SELECT SUM(amount) AS total FROM oil_disposals WHERE MONTH(disposal_date) = MONTH(CURRENT_DATE())'
         );
-        
+
         // Cálculos ambientais
         const totalOil = parseFloat(oilResult[0].total) || 0;
         const co2Saved = totalOil * 1.5; // 1.5kg por litro
         const waterSaved = totalOil * 25000; // 25.000 litros por litro
-        
+
         connection.release();
-        
+
         res.json({
             totalOil,
             co2Saved,
@@ -1912,7 +1906,7 @@ app.get('/api/sustainability/disposals', async (req, res) => {
             'LIMIT 10'
         );
         connection.release();
-        
+
         res.json(disposals);
     } catch (error) {
         console.error(error);
@@ -1924,13 +1918,13 @@ app.post('/api/sustainability/disposals', async (req, res) => {
     try {
         const { product, amount, date, notes } = req.body;
         const connection = await pool.getConnection();
-        
+
         const [result] = await connection.query(
             'INSERT INTO oil_disposals (product, amount, disposal_date, notes) ' + // Removi o responsible
             'VALUES (?, ?, ?, ?)', // Ajuste o número de parâmetros
             [product, amount, date, notes] // Removi o último valor
         );
-        
+
         connection.release();
         res.json({ success: true, id: result.insertId });
     } catch (error) {
