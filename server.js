@@ -1703,9 +1703,88 @@ app.get('/api/reports/download/:id', async (req, res) => {
 // END RELATORIOS.HTML ----------------------------------------------------------------------------------------------------------------------------------------
 
 
+// SERVER.JS - SUSTENTABILIDADE.HTML ----------------------------------------------------------------------------------------------------------------------------------------
+// Rotas para Sustentabilidade
+app.get('/api/sustainability/stats', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        
+        // Total de óleo reciclado
+        const [oilResult] = await connection.query(
+            'SELECT SUM(amount) AS total FROM oil_disposals WHERE MONTH(disposal_date) = MONTH(CURRENT_DATE())'
+        );
+        
+        // Cálculos ambientais
+        const totalOil = parseFloat(oilResult[0].total) || 0;
+        const co2Saved = totalOil * 1.5; // 1.5kg por litro
+        const waterSaved = totalOil * 25000; // 25.000 litros por litro
+        
+        connection.release();
+        
+        res.json({
+            totalOil,
+            co2Saved,
+            waterSaved
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
+app.get('/api/sustainability/disposals', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [disposals] = await connection.query(
+            'SELECT id, product, amount, disposal_date, notes ' + // Removi o responsible
+            'FROM oil_disposals ' +
+            'ORDER BY disposal_date DESC ' +
+            'LIMIT 10'
+        );
+        connection.release();
+        
+        res.json(disposals);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
+app.post('/api/sustainability/disposals', async (req, res) => {
+    try {
+        const { product, amount, date, notes } = req.body;
+        const connection = await pool.getConnection();
+        
+        const [result] = await connection.query(
+            'INSERT INTO oil_disposals (product, amount, disposal_date, notes) ' + // Removi o responsible
+            'VALUES (?, ?, ?, ?)', // Ajuste o número de parâmetros
+            [product, amount, date, notes] // Removi o último valor
+        );
+        
+        connection.release();
+        res.json({ success: true, id: result.insertId });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
+app.delete('/api/sustainability/disposals/:id', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        await connection.query(
+            'DELETE FROM oil_disposals WHERE id = ?',
+            [req.params.id]
+        );
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// END SUSTENTABILIDADE.HTML ----------------------------------------------------------------------------------------------------------------------------------------
 
 
 
