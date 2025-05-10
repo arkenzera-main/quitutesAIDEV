@@ -1293,6 +1293,176 @@ app.get('/api/tasks/summary', async (req, res) => {
 
 // END TAREFAS .HTML ----------------------------------------------------------------------------------------------------------------------------------------
 
+
+// SERVER.JS - FINANCAS.HTML --------------------------------------------------------------------------------------------------------------------------------
+
+// Rotas para Transações Financeiras
+app.get('/api/transactions', async (req, res) => {
+    try {
+        const {
+            start_date,
+            end_date,
+            type,
+            category,
+            order
+        } = req.query;
+
+        let query = `
+            SELECT id, description, amount, type, category, 
+                   DATE_FORMAT(transaction_date, '%Y-%m-%d') as date
+            FROM financial_transactions
+            WHERE 1=1
+        `;
+
+        const params = [];
+
+        if (start_date && end_date) {
+            query += ' AND transaction_date BETWEEN ? AND ?';
+            params.push(start_date, end_date);
+        }
+
+        if (type) {
+            query += ' AND type = ?';
+            params.push(type);
+        }
+
+        if (category) {
+            query += ' AND category = ?';
+            params.push(category);
+        }
+
+        // Ordenação
+        switch(order) {
+            case 'data-asc':
+                query += ' ORDER BY transaction_date ASC';
+                break;
+            case 'data-desc':
+                query += ' ORDER BY transaction_date DESC';
+                break;
+            case 'valor-asc':
+                query += ' ORDER BY amount ASC';
+                break;
+            case 'valor-desc':
+                query += ' ORDER BY amount DESC';
+                break;
+            default:
+                query += ' ORDER BY transaction_date DESC';
+        }
+
+        const [transactions] = await pool.query(query, params);
+        
+        res.json(transactions.map(t => ({
+            ...t,
+            amount: parseFloat(t.amount)
+        }));
+
+    } catch (error) {
+        console.error('Erro em /api/transactions:', error);
+        res.status(500).json({ error: 'Erro ao buscar transações' });
+    }
+});
+
+app.get('/api/finances/summary', async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+
+        let query = `
+            SELECT 
+                SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END) as total_income,
+                SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END) as total_expenses,
+                (SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END) - 
+                 SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END)) as balance
+            FROM financial_transactions
+            WHERE 1=1
+        `;
+
+        const params = [];
+
+        if (start_date && end_date) {
+            query += ' AND transaction_date BETWEEN ? AND ?';
+            params.push(start_date, end_date);
+        }
+
+        const [result] = await pool.query(query, params);
+
+        res.json({
+            total_income: result[0].total_income || 0,
+            total_expenses: result[0].total_expenses || 0,
+            balance: result[0].balance || 0
+        });
+
+    } catch (error) {
+        console.error('Erro em /api/finances/summary:', error);
+        res.status(500).json({ error: 'Erro ao calcular resumo' });
+    }
+});
+
+app.post('/api/transactions', async (req, res) => {
+    try {
+        const { description, amount, date, type, category } = req.body;
+        
+        const [result] = await pool.query(
+            `INSERT INTO financial_transactions 
+            (description, amount, transaction_date, type, category)
+            VALUES (?, ?, ?, ?, ?)`,
+            [description, amount, date, type, category]
+        );
+
+        res.json({
+            id: result.insertId,
+            message: 'Transação cadastrada com sucesso!'
+        });
+
+    } catch (error) {
+        console.error('Erro ao criar transação:', error);
+        res.status(500).json({ error: 'Erro ao salvar transação' });
+    }
+});
+
+app.put('/api/transactions/:id', async (req, res) => {
+    try {
+        const { description, amount, date, type, category } = req.body;
+        
+        await pool.query(
+            `UPDATE financial_transactions SET
+                description = ?,
+                amount = ?,
+                transaction_date = ?,
+                type = ?,
+                category = ?
+            WHERE id = ?`,
+            [description, amount, date, type, category, req.params.id]
+        );
+
+        res.json({ message: 'Transação atualizada com sucesso!' });
+
+    } catch (error) {
+        console.error('Erro ao atualizar transação:', error);
+        res.status(500).json({ error: 'Erro ao atualizar transação' });
+    }
+});
+
+app.delete('/api/transactions/:id', async (req, res) => {
+    try {
+        await pool.query(
+            'DELETE FROM financial_transactions WHERE id = ?',
+            [req.params.id]
+        );
+
+        res.json({ message: 'Transação excluída com sucesso!' });
+
+    } catch (error) {
+        console.error('Erro ao excluir transação:', error);
+        res.status(500).json({ error: 'Erro ao excluir transação' });
+    }
+});
+
+
+
+// END FINANCAS.HTML --------------------------------------------------------------------------------------------------------------------------------
+
+
+
 // SERVER.JS - VENDAS.HTML ----------------------------------------------------------------------------------------------------------------------------------------
 
 // Rotas para Vendas

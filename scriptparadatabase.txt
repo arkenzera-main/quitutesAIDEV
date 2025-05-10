@@ -150,6 +150,18 @@ CREATE TABLE IF NOT EXISTS tasks (
 );
 
 
+
+-- FINANCAS.HTML -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS financial_transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    description VARCHAR(255) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    type ENUM('entrada', 'saida') NOT NULL,
+    category ENUM('venda', 'despesa', 'investimento', 'impostos', 'outros') NOT NULL,
+    transaction_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- RELATORIOS.HTML -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS reports (
         id INT AUTO_INCREMENT PRIMARY KEY,
