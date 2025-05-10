@@ -11,8 +11,8 @@ Resolução: <div class="bg-white rounded-xl shadow-sm overflow-hidden">
 
 
 
-Em estoque.html não está trazendo dados cadastrados no banco de dados no formulário editar.
-ESTOQUE.HTML no momento:
+Em estoque.html não estava trazendo dados cadastrados no banco de dados no formulário editar.
+Resolução: ESTOQUE.HTML: 
 
 <!DOCTYPE html>
 <html lang="pt-br">
@@ -645,7 +645,7 @@ ESTOQUE.HTML no momento:
                             <option value="recheio Doce">Recheio Doce</option>
                             <option value="recheio Salgado">Recheio Salgado</option>
                             <option value="ingredientes">Ingredientes</option>
-                            <option value="outros">Outros</option>`;  
+                            <option value="outros">Outros</option>`;
 
                 // Se houver um filtro de categoria selecionado, define o valor
                 if (currentCategoryFilter) {
@@ -783,7 +783,9 @@ ESTOQUE.HTML no momento:
         async function openEditModal(productId) {
             try {
                 const response = await fetch(`/api/products/${productId}`);
-                const product = await response.json();
+                const result = await response.json();
+                const product = result.product;
+
                 console.log('Produto carregado:', product);
 
                 // Populate form
@@ -944,7 +946,7 @@ ESTOQUE.HTML no momento:
 
 </html>
 
-SERVER.JS
+SERVER.JS --- 
 // [1] Rota GET para listar produtos com paginação e filtros (refatorada)
 app.get('/api/products', async (req, res) => {
     try {
@@ -1034,5 +1036,108 @@ app.get('/api/products/:id', async (req, res) => {
     } catch (error) {
         console.error('Erro GET /api/products/:id:', error);
         res.status(500).json({ success: false, error: 'Erro no servidor' });
+    }
+});
+
+
+// [3] Rota POST para criar novo produto
+app.post('/api/products', async (req, res) => {
+    try {
+        const { name, category, current_stock, minimum_stock, unit, description } = req.body;
+        
+        // Validação básica
+        if (!name || !category || current_stock === undefined || !minimum_stock || !unit) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Campos obrigatórios faltando' 
+            });
+        }
+
+        const [result] = await pool.query(
+            `INSERT INTO products 
+            (name, category, current_stock, minimum_stock, unit, description)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [name, category, current_stock, minimum_stock, unit, description]
+        );
+
+        res.json({ 
+            success: true, 
+            productId: result.insertId,
+            message: 'Produto criado com sucesso'
+        });
+
+    } catch (error) {
+        console.error('Erro POST /api/products:', error);
+        res.status(500).json({ success: false, error: 'Erro ao criar produto' });
+    }
+});
+
+// [4] Rota PUT para atualizar produto
+app.put('/api/products/:id', async (req, res) => {
+    try {
+        const productId = req.params.id;
+        const { name, category, current_stock, minimum_stock, unit, description } = req.body;
+
+        // Verifica se o produto existe
+        const [check] = await pool.query(
+            'SELECT id FROM products WHERE id = ?',
+            [productId]
+        );
+
+        if (check.length === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Produto não encontrado' 
+            });
+        }
+
+        // Atualização
+        await pool.query(
+            `UPDATE products SET
+                name = ?,
+                category = ?,
+                current_stock = ?,
+                minimum_stock = ?,
+                unit = ?,
+                description = ?
+            WHERE id = ?`,
+            [name, category, current_stock, minimum_stock, unit, description, productId]
+        );
+
+        res.json({ 
+            success: true, 
+            message: 'Produto atualizado com sucesso' 
+        });
+
+    } catch (error) {
+        console.error('Erro PUT /api/products/:id:', error);
+        res.status(500).json({ success: false, error: 'Erro ao atualizar produto' });
+    }
+});
+
+
+// [5] Rota DELETE para remover produto
+app.delete('/api/products/:id', async (req, res) => {
+    try {
+        const [result] = await pool.query(
+            'DELETE FROM products WHERE id = ?',
+            [req.params.id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ 
+                success: false, 
+                error: 'Produto não encontrado' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Produto excluído com sucesso' 
+        });
+
+    } catch (error) {
+        console.error('Erro DELETE /api/products/:id:', error);
+        res.status(500).json({ success: false, error: 'Erro ao excluir produto' });
     }
 });
