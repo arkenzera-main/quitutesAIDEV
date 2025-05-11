@@ -1,7 +1,11 @@
-VENDAS
-Solução de bug da tela VENDAS.HTML onde não trazia produtos cadastrados em estoque para registrar vendas. E não estava abrindo formulário editar vendas balcão
+Na tela dashboard ainda aparece icone de notificação.
 
-vendas.html:
+Fiz alteração nas tabelas customers e orders:
+ALTER TABLE customers ADD UNIQUE INDEX name_unique (name);
+
+ALTER TABLE orders MODIFY status ENUM('pending','preparing','ready','delivered','canceled');
+
+VENDAS.HTML:
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -326,6 +330,9 @@ vendas.html:
                                 <tr>
                                     <th scope="col"
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Número</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Data</th>
                                     <th scope="col"
                                         class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -437,7 +444,7 @@ vendas.html:
                         <div class="mb-4">
                             <label for="venda-itens" class="block text-sm font-medium text-gray-700">Itens *</label>
                             <div class="mt-1 space-y-2" id="venda-itens-container">
-                                <!-- Items will be added here -->
+                                <!-- Items will be added here *****-->
                             </div>
                             <button type="button" onclick="addItemRow()"
                                 class="mt-2 inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
@@ -459,11 +466,11 @@ vendas.html:
                                 <select id="venda-status"
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                                     required>
-                                    <option value="pendente">Pendente</option>
-                                    <option value="preparo">Em preparo</option>
-                                    <option value="pronto">Pronto</option>
-                                    <option value="entregue">Entregue</option>
-                                    <option value="cancelado">Cancelado</option>
+                                    <option value="pending">Pendente</option>
+                                    <option value="preparing">Em preparo</option>
+                                    <option value="ready">Pronto</option>
+                                    <option value="delivered">Entregue</option>
+                                    <option value="canceled">Cancelado</option>
                                 </select>
                             </div>
                         </div>
@@ -673,11 +680,11 @@ vendas.html:
                 // Modifique a seção de status para:
                 let statusColor, statusText;
                 const statusMap = {
-                    'pendente': { text: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
-                    'preparo': { text: 'Em Preparo', color: 'bg-blue-100 text-blue-800' },
-                    'pronto': { text: 'Pronto', color: 'bg-purple-100 text-purple-800' },
-                    'entregue': { text: 'Entregue', color: 'bg-green-100 text-green-800' },
-                    'cancelado': { text: 'Cancelado', color: 'bg-red-100 text-red-800' }
+                    'pending': { text: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
+                    'preparing': { text: 'Em Preparo', color: 'bg-blue-100 text-blue-800' },
+                    'ready': { text: 'Pronto', color: 'bg-blue-100 text-blue-800' },
+                    'delivered': { text: 'Entregue', color: 'bg-green-100 text-green-800' },
+                    'canceled': { text: 'Cancelado', color: 'bg-red-100 text-red-800' }
                 };
 
                 const statusInfo = statusMap[venda.status] || { text: 'Desconhecido', color: 'bg-gray-100 text-gray-800' };
@@ -695,6 +702,9 @@ vendas.html:
                 const formattedTotal = isNaN(totalAmount) ? '0,00' : totalAmount.toFixed(2).replace('.', ',');
 
                 row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                     ${venda.order_number} <!-- ADD THIS -->
+                </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 ${formattedDate}
             </td>
@@ -867,6 +877,7 @@ vendas.html:
                 const response = await fetch(`/api/sales/${id}`);
                 if (!response.ok) throw new Error('Erro ao carregar venda');
                 const venda = await response.json();
+                console.log('Dados da venda para edição:', venda)
 
                 // Preenche os campos do formulário
                 document.getElementById('venda-id').value = venda.id;
@@ -896,7 +907,7 @@ vendas.html:
                 document.getElementById('venda-itens-container').innerHTML = '';
                 (venda.items || []).forEach(item => {
                     addItemRow({
-                        product: item.product,
+                        product: item.product_id || item.product,
                         quantity: item.quantity,
                         valor: item.unit_price
                     });
@@ -909,6 +920,7 @@ vendas.html:
                 mostrarMensagem('Erro ao carregar venda para edição', 'error');
             }
         }
+        
         // Delete sale - Versão integrada com API
         async function excluirVenda(id) {
             if (confirm('Tem certeza que deseja excluir esta venda?')) {
@@ -1053,30 +1065,31 @@ vendas.html:
 
 </html>
 
-
-
-// SERVER.JS - VENDAS.HTML -----------------------------------------------------------------------------------------------------------
-
+SERVER.JS:
+// SERVER.JS - VENDAS.HTML --------------------------------------------------------------------------------------------------------------------------
 // Rotas para Vendas
 // CRUD READ
 app.get('/api/sales', async (req, res) => {
     try {
         const connection = await pool.getConnection();
-
+        
+        // Query corrigida com JOIN
         const [orders] = await connection.query(`
-            SELECT o.*, c.name as customer_name,
+            SELECT 
+                o.id,
+                o.order_number,
+                o.status,
+                o.total_amount,
+                o.order_date,
                 o.channel,
-                o.whatsapp_number,
-                o.ifood_order,
-                o.attendant,
-                COUNT(oi.id) as items_count
+                c.name AS customer_name,
+                o.ifood_order
             FROM orders o
-            LEFT JOIN customers c ON o.customer_id = c.id
-            LEFT JOIN order_items oi ON o.id = oi.order_id
-            GROUP BY o.id
+            LEFT JOIN customers c ON o.customer_id = c.id 
             ORDER BY o.order_date DESC
         `);
 
+        // Query dos itens mantida igual
         const [items] = await connection.query(`
             SELECT oi.order_id, p.name as product, oi.quantity, oi.unit_price
             FROM order_items oi
@@ -1096,11 +1109,17 @@ app.get('/api/sales', async (req, res) => {
         }));
 
         res.json(sales);
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Database error' });
+        console.error('Erro em /api/sales:', error);
+        res.status(500).json({
+            error: 'Database error',
+            details: error.message // Adicione esta linha para ver o erro exato
+        });
     }
 });
+
+
 
 // [4] Rota GET para listar todos os produtos
 app.get('/api/products', async (req, res) => {
@@ -1168,20 +1187,51 @@ app.get('/api/sales/summary', async (req, res) => {
 app.post('/api/sales', async (req, res) => {
     let connection;
     try {
+        console.log("[1] Body recebido:", JSON.stringify(req.body, null, 2)); // Log detalhado
         const { customer, channel, items, total, status, observations, channelData } = req.body;
+
         connection = await pool.getConnection();
         await connection.beginTransaction();
+        console.log("[2] Conexão com banco estabelecida");
+
+        // Modifique a geração do order_number:
+        const [counter] = await connection.query(
+            `SELECT MAX(CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)) AS last_seq 
+     FROM orders 
+     WHERE order_number LIKE ?`,
+            [`${new Date().getFullYear()}%`]
+        );
+        const sequence = (counter[0].last_seq || 0) + 1;
+        const orderNumber = `${new Date().getFullYear()}-${sequence.toString().padStart(4, '0')}`;
+        console.log("[5] Order Number gerado:", orderNumber);
+
+        // Modifique o mapeamento de status para:
+        const statusMap = {
+            'pendente': 'pending',
+            'preparo': 'preparing',
+            'pronto': 'ready',
+            'entregue': 'delivered',
+            'cancelado': 'canceled'
+        };
+        const mappedStatus = statusMap[status] || 'pending';
+
+        console.log('Status mapeado:', mappedStatus); // Adicione este log
 
         // 1. Criar ou buscar cliente
+        // Modifique a query de cliente para:
         const [customerResult] = await connection.query(
             `INSERT INTO customers (name) VALUES (?) 
-             ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)`,
+     ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)`,
             [customer]
         );
+        console.log("[3] Resultado do cliente:", customerResult);
 
-        // 2. Criar a ordem com todos os campos necessários
+        console.log('Cliente result:', customerResult); // Adicione este log
+
+        // 2. Criar a ordem com order_number e status mapeado
         const [orderResult] = await connection.query(
             `INSERT INTO orders (
+                order_number,
                 customer_id, 
                 total_amount, 
                 status, 
@@ -1190,12 +1240,13 @@ app.post('/api/sales', async (req, res) => {
                 whatsapp_number,
                 ifood_order,
                 attendant
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
+                orderNumber,
                 customerResult.insertId,
                 total,
-                status,
-                observations || null, // Corrigido campo notes
+                mappedStatus,
+                observations || null,
                 channel,
                 channelData?.whatsapp || null,
                 channelData?.ifood || null,
@@ -1204,41 +1255,50 @@ app.post('/api/sales', async (req, res) => {
         );
 
         // 3. Inserir itens com validação de produto
+        // Modifique o loop de itens para:
         for (const item of items) {
+            console.log("[4] Processando item:", item);
+
+            // Verificar se o produto existe
+            // server.js - No loop de itens
             const [product] = await connection.query(
-                `SELECT id FROM products 
-                 WHERE name = ? LIMIT 1`,
-                [item.product]
+                `SELECT id FROM products WHERE id = ? LIMIT 1`,
+                [parseInt(item.product)] // Converte para número
             );
 
-            if (product.length > 0) {
-                await connection.query(
-                    `INSERT INTO order_items 
-                     (order_id, product_id, quantity, unit_price)
-                     VALUES (?, ?, ?, ?)`,
-                    [orderResult.insertId, product[0].id, item.quantity, item.valor]
-                );
+            if (!product.length) {
+                throw new Error(`Produto ID ${item.product} não encontrado`);
             }
+
+            await connection.query(
+                `INSERT INTO order_items 
+         (order_id, product_id, quantity, unit_price)
+         VALUES (?, ?, ?, ?)`,
+                [orderResult.insertId, product[0].id, item.quantity, item.valor]
+            );
         }
 
         await connection.commit();
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             id: orderResult.insertId,
             message: 'Venda registrada com sucesso!'
         });
 
     } catch (error) {
-        if (connection) {
-            await connection.rollback();
-            console.error('Rollback executado devido a erro:', error);
-        }
-        res.status(500).json({ 
-            error: 'Erro ao processar venda',
-            details: error.message
+        console.error("[ERRO CRÍTICO]", error.message);
+        console.error("Stack Trace:", error.stack); // Log do stack trace
+        if (connection) await connection.rollback();
+        res.status(500).json({
+            error: "Erro interno",
+            details: error.message,
+            sqlError: error.sqlMessage // Se aplicável
         });
     } finally {
-        if (connection) connection.release();
+        if (connection) {
+            console.log("[FIM] Liberando conexão");
+            connection.release();
+        }
     }
 });
 
@@ -1297,14 +1357,14 @@ app.put('/api/sales/:id', async (req, res) => {
             [status, observations, id]
         );
 
-        res.json({ 
+        res.json({
             success: true,
             message: 'Venda atualizada com sucesso!'
         });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Erro ao atualizar venda',
             details: error.message
         });
@@ -1335,4 +1395,5 @@ app.delete('/api/sales/:id', async (req, res) => {
 });
 
 
-// END VENDAS .HTML --------------
+// END VENDAS .HTML ------------------------------------------------------------------------------------------------------------
+Na tela vendas ainda falta adicionar (talvez) um <select> junto com as <option> na função editarVendas() igual tem na função addItemRow().
