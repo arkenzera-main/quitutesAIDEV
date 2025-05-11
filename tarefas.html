@@ -118,6 +118,15 @@
             background-color: #fce7f3;
             color: #9d174d;
         }
+
+        /* Adicione no <style> do cabeçalho */
+        .google-calendar-btn {
+            transition: all 0.2s ease;
+        }
+
+        .google-calendar-btn:hover {
+            transform: translateY(-1px);
+        }
     </style>
 </head>
 
@@ -179,7 +188,8 @@
                             </a>
                         </li>
                         <li>
-                            <a href="relatorios.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="relatorios.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-chart-bar mr-3"></i>
                                 <span class="nav-text">Relatórios</span>
                             </a>
@@ -329,6 +339,14 @@
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-semibold text-gray-800">Todas as Tarefas</h2>
                         <div class="flex space-x-2">
+                            <!-- Campo de pesquisa novo -->
+                            <div class="relative">
+                                <input type="text" id="search-tasks" placeholder="Pesquisar..."
+                                    class="pl-8 pr-3 py-1 border rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-sm">
+                                <i
+                                    class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            </div>
+
                             <div class="relative">
                                 <select id="task-filter"
                                     class="appearance-none pl-3 pr-8 py-1 border rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 bg-white text-sm">
@@ -505,52 +523,60 @@
                     </div>
                 </div>
 
-                <!-- Task Category Modal -->
+                <!-- Modal para categorias de tarefas -->
                 <div id="task-category-modal"
                     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
                     <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
                         <div class="p-4 border-b flex justify-between items-center">
-                            <h3 class="text-lg font-semibold text-gray-800">Nova Categoria de Tarefa</h3>
+                            <h3 class="text-lg font-semibold text-gray-800">Gerenciar Categorias</h3>
                             <button id="close-task-category-modal" class="text-gray-400 hover:text-gray-500">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
                         <div class="p-6">
                             <div class="mb-4">
-                                <label for="new-task-category-name"
-                                    class="block text-sm font-medium text-gray-700 mb-1">Nome da Categoria*</label>
-                                <input type="text" id="new-task-category-name" required
-                                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Categorias
+                                    Existentes</label>
+                                <div id="categories-list" class="space-y-2">
+                                    <!-- Categorias serão carregadas aqui -->
+                                </div>
                             </div>
-                            <div class="mb-4">
-                                <label for="new-task-category-color"
-                                    class="block text-sm font-medium text-gray-700 mb-1">Cor</label>
-                                <select id="new-task-category-color"
-                                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="indigo" class="text-indigo-600">Indigo</option>
-                                    <option value="red" class="text-red-600">Vermelho</option>
-                                    <option value="yellow" class="text-yellow-600">Amarelo</option>
-                                    <option value="green" class="text-green-600">Verde</option>
-                                    <option value="blue" class="text-blue-600">Azul</option>
-                                    <option value="purple" class="text-purple-600">Roxo</option>
-                                    <option value="pink" class="text-pink-600">Rosa</option>
-                                </select>
-                            </div>
-                            <div class="flex justify-end space-x-3">
-                                <button type="button" id="cancel-task-category"
-                                    class="px-4 py-2 border rounded-lg hover:bg-gray-50">
-                                    Cancelar
-                                </button>
-                                <button type="button" id="save-task-category"
-                                    class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-                                    Salvar Categoria
-                                </button>
+
+                            <div class="border-t pt-4">
+                                <h4 class="text-sm font-medium text-gray-700 mb-2">Adicionar Nova Categoria</h4>
+                                <div class="mb-4">
+                                    <input type="text" id="new-task-category-name" placeholder="Nome da categoria"
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div class="mb-4">
+                                    <select id="new-task-category-color"
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <option value="indigo">Indigo</option>
+                                        <option value="red">Vermelho</option>
+                                        <option value="yellow">Amarelo</option>
+                                        <option value="green">Verde</option>
+                                        <option value="blue">Azul</option>
+                                        <option value="purple">Roxo</option>
+                                        <option value="pink">Rosa</option>
+                                    </select>
+                                </div>
+                                <div class="flex justify-end space-x-3">
+                                    <button type="button" id="cancel-task-category"
+                                        class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                                        Cancelar
+                                    </button>
+                                    <button type="button" id="save-task-category"
+                                        class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                                        Salvar Categoria
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Task Details Modal -->
+                <!-- Task Details Modal (corrigido) -->
                 <div id="task-details-modal"
                     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
                     <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -569,6 +595,8 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Conteúdo Principal -->
                         <div class="p-6">
                             <div class="mb-6">
                                 <h3 class="text-xl font-bold text-gray-800 mb-2" id="task-details-name">Nome da Tarefa
@@ -589,7 +617,17 @@
                                 <div class="flex items-center text-sm text-gray-600 mb-4">
                                     <i class="fas fa-calendar-day mr-2"></i>
                                     <span id="task-details-date">Data de vencimento</span>
+                                    <input type="date" id="task-due-date" required
+                                        class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                 </div>
+                            </div>
+                            <!-- Seção do Google Agenda (ADICIONE AQUI) -->
+                            <div class="mt-8 pt-4 border-t">
+                                <button id="add-to-google-calendar" class="w-full px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg 
+                               flex items-center justify-center transition-colors">
+                                    <i class="fab fa-google mr-2"></i>
+                                    Adicionar ao Google Agenda
+                                </button>
                                 <div class="mb-4">
                                     <h4 class="text-sm font-medium text-gray-700 mb-2">Descrição</h4>
                                     <p class="text-gray-600 whitespace-pre-line" id="task-details-description">Nenhuma
@@ -867,6 +905,55 @@
                 });
         }
 
+        // Função para carregar a lista de categorias no modal
+        function loadCategoriesList() {
+            const categoriesList = document.getElementById('categories-list');
+            categoriesList.innerHTML = '';
+
+            categories.forEach(category => {
+                const categoryElement = document.createElement('div');
+                categoryElement.className = 'flex justify-between items-center bg-gray-50 p-2 rounded-lg';
+                categoryElement.innerHTML = `
+            <span class="px-2 py-1 rounded-full text-xs ${getCategoryClass(category.color)}">
+                ${category.name}
+            </span>
+            <button class="text-red-500 hover:text-red-700 delete-category" data-category-id="${category.id}">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
+                categoriesList.appendChild(categoryElement);
+            });
+
+            // Adiciona eventos de clique para deletar
+            document.querySelectorAll('.delete-category').forEach(button => {
+                button.addEventListener('click', function () {
+                    const categoryId = this.dataset.categoryId;
+                    deleteCategory(categoryId);
+                });
+            });
+        }
+
+        // Função para deletar categoria
+        async function deleteCategory(categoryId) {
+            if (!confirm('Tem certeza que deseja excluir esta categoria? Isso removerá a categoria de todas as tarefas.')) return;
+
+            try {
+                const response = await fetch(`/api/categories/${categoryId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Erro ao deletar categoria');
+
+                showNotification('Sucesso', 'Categoria excluída com sucesso!', 'success');
+                loadCategories();
+            } catch (error) {
+                console.error('Error deleting category:', error);
+                showNotification('Erro', error.message, 'error');
+            }
+        }
+
+
+
         // Populate category selects
         function populateCategorySelects() {
             // Clear existing options
@@ -1024,25 +1111,25 @@
         }
 
         // Render upcoming tasks
-        function renderUpcomingTasks(upcomingTasks) {
+        function renderUpcomingTasks(tasks) {
             // Clear existing tasks
             upcomingTasks.innerHTML = '';
 
-            if (upcomingTasks.length === 0) {
+            if (tasks.length === 0) {
                 upcomingTasks.innerHTML = `
-                    <div class="text-center text-gray-500 py-4">
-                        <i class="fas fa-tasks text-2xl mb-2"></i>
-                        <p>Nenhuma tarefa próxima</p>
-                    </div>
-                `;
+            <div class="text-center text-gray-500 py-4">
+                <i class="fas fa-tasks text-2xl mb-2"></i>
+                <p>Nenhuma tarefa próxima</p>
+            </div>
+        `;
                 return;
             }
 
             // Sort by due date
-            upcomingTasks.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+            tasks.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
 
             // Render tasks
-            upcomingTasks.forEach(task => {
+            tasks.forEach(task => {
                 const dueDate = new Date(task.due_date);
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -1160,7 +1247,8 @@
                 // Formata a data corretamente
                 if (task.due_date) {
                     const dueDate = new Date(task.due_date);
-                    taskDueDateInput.value = dueDate.toISOString().split('T')[0];
+                    const localDateTime = dueDate.toISOString().slice(0, 16);
+                    taskDueDateInput.value = localDateTime;
                 } else {
                     taskDueDateInput.value = '';
                 }
@@ -1206,7 +1294,9 @@
             const taskId = taskIdInput.value;
             const title = taskTitleInput.value.trim();
             const description = taskDescriptionInput.value.trim();
-            const due_date = taskDueDateInput.value;
+            const dueDate = new Date(taskDueDateInput.value);
+            dueDate.setMinutes(dueDate.getMinutes() - dueDate.getTimezoneOffset());
+            const due_date = dueDate.toISOString().slice(0, 19).replace('T', ' ');
             const priority = taskPrioritySelect.value;
             const status = taskStatusSelect.value;
             const category_id = taskCategorySelect.value || null;
@@ -1449,6 +1539,7 @@
                         showNotification('Sucesso', 'Categoria criada com sucesso!', 'success');
                         closeTaskCategoryModalFunc();
                         loadCategories();
+                        loadCategoriesList();
                     } else {
                         showNotification('Erro', data.message || 'Erro ao criar categoria.', 'error');
                     }
@@ -1483,6 +1574,64 @@
                 notification.classList.add('hidden');
             }, 5000);
         }
+
+        // Função para gerar link do Google Calendar
+        function generateGoogleCalendarLink(task) {
+            const startDate = new Date(task.due_date);
+            const endDate = new Date(startDate.getTime() + 30 * 60000); // +30 minutos
+
+            const params = new URLSearchParams({
+                action: "TEMPLATE",
+                text: task.title,
+                details: task.description || '',
+                dates: `${startDate.toISOString().replace(/-|:|\.\d\d\d/g, '')}/${endDate.toISOString().replace(/-|:|\.\d\d\d/g, '')}`,
+                ctz: Intl.DateTimeFormat().resolvedOptions().timeZone
+            });
+
+            return `https://calendar.google.com/calendar/render?${params}`;
+        }
+
+        // Função para verificar lembretes
+        function checkReminders() {
+            tasks.forEach(task => {
+                if (task.reminder_minutes && !task.reminder_sent && task.status !== 'completed') {
+                    const dueDate = new Date(task.due_date);
+                    const reminderTime = new Date(dueDate.getTime() - task.reminder_minutes * 60000);
+
+                    if (new Date() >= reminderTime) {
+                        showNotification('Lembrete', `Tarefa "${task.title}" está próxima!`, 'info');
+                        // Marcar como enviado (precisa implementar no backend)
+                        markReminderAsSent(task.id);
+                    }
+                }
+            });
+        }
+
+        // Verificar a cada minuto
+        setInterval(checkReminders, 60000);
+
+        // Função para marcar lembrete como enviado
+        async function markReminderAsSent(taskId) {
+            try {
+                await fetch(`/api/tasks/${taskId}/reminder`, {
+                    method: 'PUT'
+                });
+            } catch (error) {
+                console.error('Error marking reminder:', error);
+            }
+        }
+
+
+
+        // Adicione o evento de clique
+        document.getElementById('add-to-google-calendar').addEventListener('click', function () {
+            const taskId = taskDetailsModal.dataset.currentTaskId;
+            const task = tasks.find(t => t.id == taskId);
+
+            if (task) {
+                window.open(generateGoogleCalendarLink(task), '_blank');
+            }
+        });
 
         // Helper functions
         function getPriorityText(priority) {

@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS `recipe_ingredients` (
   CONSTRAINT `recipe_ingredients_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
+
 -- Criar tabela de log de receitas
 CREATE TABLE IF NOT EXISTS `recipe_log` (
   `id` INT(11) NOT NULL AUTO_INCREMENT,
@@ -113,9 +114,7 @@ CREATE TABLE IF NOT EXISTS `recipe_log` (
   PRIMARY KEY (`id`),
   KEY `recipe_id` (`recipe_id`),
   CONSTRAINT `recipe_log_ibfk_1` FOREIGN KEY (`recipe_id`) REFERENCES `recipes` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
-
-
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 
 
@@ -131,19 +130,23 @@ CREATE TABLE IF NOT EXISTS task_categories (
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS tasks (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                title VARCHAR(255) NOT NULL,
-                description TEXT,
-                due_date DATETIME NOT NULL,
-                priority ENUM('low', 'medium', 'high') NOT NULL DEFAULT 'medium',
-                status ENUM('pending', 'in_progress', 'completed') NOT NULL DEFAULT 'pending',
-                category_id INT,
-                reminder_minutes INT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                FOREIGN KEY (category_id) REFERENCES task_categories(id) ON DELETE SET NULL
-);
+CREATE TABLE `tasks` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `due_date` datetime NOT NULL,
+  `priority` enum('low','medium','high') NOT NULL DEFAULT 'medium',
+  `status` enum('pending','in_progress','completed') NOT NULL DEFAULT 'pending',
+  `category_id` int(11) DEFAULT NULL,
+  `reminder_minutes` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `reminder_sent` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `category_id` (`category_id`),
+  CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `task_categories` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+
 
 
 

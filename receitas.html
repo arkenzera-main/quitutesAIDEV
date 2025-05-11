@@ -134,7 +134,8 @@
                             </a>
                         </li>
                         <li>
-                            <a href="relatorios.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="relatorios.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-chart-bar mr-3"></i>
                                 <span class="nav-text">Relatórios</span>
                             </a>
@@ -553,12 +554,6 @@
                 addIngredientField();
             });
 
-            // Search recipes
-            document.getElementById('search-recipes').addEventListener('input', function () {
-                currentSearchQuery = this.value;
-                currentPage = 1;
-                loadRecipes();
-            });
 
             // Category filter
             document.getElementById('category-filter').addEventListener('change', function () {
@@ -713,7 +708,18 @@
         async function loadRecipeCategories() {
             try {
                 const response = await fetch('/api/recipes/categories');
+
+                // Adicione verificação de status
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 recipeCategories = await response.json();
+
+                // Adicione verificação de tipo
+                if (!Array.isArray(recipeCategories)) {
+                    throw new Error('Dados recebidos não são um array');
+                }
 
                 // Update category filter dropdown
                 const categoryFilter = document.getElementById('category-filter');
@@ -953,10 +959,25 @@
         async function loadProductsForIngredients() {
             try {
                 const response = await fetch('/api/products/select');
-                productsForIngredients = await response.json();
+
+                // Verifique se a resposta é válida
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Garanta que seja sempre um array
+                productsForIngredients = Array.isArray(data) ? data : [];
+
+                // Adicione um fallback caso esteja vazio
+                if (productsForIngredients.length === 0) {
+                    console.warn('Nenhum produto encontrado para seleção de ingredientes');
+                }
             } catch (error) {
                 console.error('Error loading products for ingredients:', error);
-                showNotification('Erro ao carregar produtos para ingredientes', 'error');
+                productsForIngredients = []; // Garante array vazio mesmo com erro
+                showNotification('Erro ao carregar produtos. Tente recarregar a página.', 'error');
             }
         }
 
@@ -978,7 +999,7 @@
                     <div class="md:col-span-2">
                         <select class="ingredient-product w-full px-2 py-1 border rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 text-sm" required>
                             <option value="">Selecione um produto</option>
-                            ${productsForIngredients.map(product =>
+                            ${(productsForIngredients || []).map(product =>
                 `<option value="${product.id}" 
                                  data-unit="${product.unit}"
                                  ${ingredient && ingredient.product_id == product.id ? 'selected' : ''}>

@@ -764,7 +764,6 @@
             openModal('modal-venda');
         }
 
-        // Add item row to sale form
         function addItemRow(item = { produto: '', quantidade: 1, valor: 0 }) {
             const container = document.getElementById('venda-itens-container');
             const itemId = Date.now();
@@ -774,32 +773,67 @@
             row.id = `item-${itemId}`;
 
             row.innerHTML = `
-                <div class="flex-1">
-                    <label for="item-produto-${itemId}" class="block text-xs font-medium text-gray-500">Produto</label>
-                    <input type="text" id="item-produto-${itemId}" value="${item.produto}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="Nome do produto">
-                </div>
-                <div class="w-20">
-                    <label for="item-quantidade-${itemId}" class="block text-xs font-medium text-gray-500">Qtd</label>
-                    <input type="number" id="item-quantidade-${itemId}" value="${item.quantidade}" min="1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                </div>
-                <div class="w-24">
-                    <label for="item-valor-${itemId}" class="block text-xs font-medium text-gray-500">Valor</label>
-                    <input type="number" id="item-valor-${itemId}" value="${item.valor}" step="0.01" min="0" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                </div>
-                <button type="button" onclick="removeItemRow('${itemId}')" class="mb-1 text-red-500 hover:text-red-700">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
+        <div class="flex-1">
+            <label for="item-produto-${itemId}" class="block text-xs font-medium text-gray-500">Produto</label>
+            <select id="item-produto-${itemId}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
+                <option value="">Selecione...</option>
+            </select>
+        </div>
+        <div class="w-20">
+            <label for="item-quantidade-${itemId}" class="block text-xs font-medium text-gray-500">Qtd</label>
+            <input type="number" id="item-quantidade-${itemId}" value="${item.quantidade}" min="1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
+        </div>
+        <div class="w-24">
+            <label for="item-valor-${itemId}" class="block text-xs font-medium text-gray-500">Valor</label>
+            <input type="number" id="item-valor-${itemId}" value="${item.valor}" step="0.01" min="0" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
+        </div>
+        <button type="button" onclick="removeItemRow('${itemId}')" class="mb-1 text-red-500 hover:text-red-700">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
 
             container.appendChild(row);
 
+            // Adiciona listener para calcular total quando os inputs mudam
             const inputs = row.querySelectorAll('input');
             inputs.forEach(input => {
                 input.addEventListener('input', calculateTotal);
             });
 
-            calculateTotal(); // Chame imediatamente após adicionar
+            // Popula o select com os produtos cadastrados
+            fetch('/api/products')
+                .then(res => {
+                    if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
+                    return res.json();
+                })
+                .then(response => {
+                    console.log('Resposta da API:', response); // Verifique o que está vindo
+
+                    // Acessa os produtos dependendo da estrutura da resposta
+                    const produtos = response.data || response.products || [];
+
+                    if (!Array.isArray(produtos)) throw new Error('Resposta não é uma lista de produtos');
+
+                    const select = document.getElementById(`item-produto-${itemId}`);
+                    select.innerHTML = '<option value="">Selecione...</option>';
+
+                    produtos.forEach(produto => {
+                        const option = document.createElement('option');
+                        option.value = produto.id;   // Armazena o id do produto no valor da option
+                        option.textContent = produto.name;  // Exibe o nome do produto
+                        if (produto.id === item.produto) option.selected = true;  // Marca o produto selecionado, se houver
+                        select.appendChild(option);
+                    });
+                })
+                .catch(err => {
+                    const select = document.getElementById(`item-produto-${itemId}`);
+                    select.innerHTML = '<option value="">Erro ao carregar produtos</option>';
+                    console.error('Erro ao buscar produtos:', err);
+                });
+
+            calculateTotal();
         }
+
 
         // Remove item row from sale form
         function removeItemRow(itemId) {
@@ -826,10 +860,8 @@
         // Edit sale - Versão integrada com API
         async function editarVenda(id) {
             try {
-                // Busca os dados da venda na API
                 const response = await fetch(`/api/sales/${id}`);
                 if (!response.ok) throw new Error('Erro ao carregar venda');
-
                 const venda = await response.json();
 
                 // Preenche os campos do formulário
@@ -841,7 +873,7 @@
                 document.getElementById('venda-status').value = venda.status;
                 document.getElementById('venda-observacoes').value = venda.notes || '';
 
-                // Preenche campos específicos do canal
+                // Mostra informações específicas do canal
                 document.getElementById('whatsapp-info').classList.add('hidden');
                 document.getElementById('ifood-info').classList.add('hidden');
                 document.getElementById('balcao-info').classList.add('hidden');
@@ -854,16 +886,15 @@
                     document.getElementById('ifood-order').value = venda.ifood_order || '';
                 } else if (venda.channel === 'balcao') {
                     document.getElementById('balcao-info').classList.remove('hidden');
-                    document.getElementById('balcao-attendant').value = venda.attendant || '';
+                    // Removido o acesso ao elemento inexistente
                 }
 
-                // Limpa e adiciona os itens
                 document.getElementById('venda-itens-container').innerHTML = '';
-                (venda.items || venda.itens || []).forEach(item => {
+                (venda.items || []).forEach(item => {
                     addItemRow({
-                        produto: item.product || item.produto,
-                        quantidade: item.quantity || item.quantidade,
-                        valor: item.unit_price || item.valor
+                        product: item.product,
+                        quantity: item.quantity,
+                        valor: item.unit_price
                     });
                 });
 
@@ -874,7 +905,6 @@
                 mostrarMensagem('Erro ao carregar venda para edição', 'error');
             }
         }
-
         // Delete sale - Versão integrada com API
         async function excluirVenda(id) {
             if (confirm('Tem certeza que deseja excluir esta venda?')) {

@@ -482,11 +482,38 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
+// ROTA QUE FAZ PARTA DA TELA RECEITAS.HTML POREM PRECISA VIR ANTES DE /api/products/:id
+// Get all products for ingredient selection
+app.get('/api/products/select', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [products] = await connection.query(
+            'SELECT id, name, category, unit FROM products ORDER BY name'
+        );
+        connection.release();
+
+        if (products.length === 0) {
+            return res.status(200).json([]); // Array vazio
+        }
+
+        res.json(products);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao carregar produtos'
+        });
+    }
+});
+
+
+
 // [2] Rota GET para buscar um produto específico
 app.get('/api/products/:id', async (req, res) => {
     try {
         const [rows] = await pool.query(
-            'SELECT * FROM products WHERE id = ?', 
+            'SELECT * FROM products WHERE id = ?',
             [req.params.id]
         );
 
@@ -506,12 +533,12 @@ app.get('/api/products/:id', async (req, res) => {
 app.post('/api/products', async (req, res) => {
     try {
         const { name, category, current_stock, minimum_stock, unit, description } = req.body;
-        
+
         // Validação básica
         if (!name || !category || current_stock === undefined || !minimum_stock || !unit) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Campos obrigatórios faltando' 
+            return res.status(400).json({
+                success: false,
+                error: 'Campos obrigatórios faltando'
             });
         }
 
@@ -522,8 +549,8 @@ app.post('/api/products', async (req, res) => {
             [name, category, current_stock, minimum_stock, unit, description]
         );
 
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             productId: result.insertId,
             message: 'Produto criado com sucesso'
         });
@@ -547,9 +574,9 @@ app.put('/api/products/:id', async (req, res) => {
         );
 
         if (check.length === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Produto não encontrado' 
+            return res.status(404).json({
+                success: false,
+                error: 'Produto não encontrado'
             });
         }
 
@@ -566,9 +593,9 @@ app.put('/api/products/:id', async (req, res) => {
             [name, category, current_stock, minimum_stock, unit, description, productId]
         );
 
-        res.json({ 
-            success: true, 
-            message: 'Produto atualizado com sucesso' 
+        res.json({
+            success: true,
+            message: 'Produto atualizado com sucesso'
         });
 
     } catch (error) {
@@ -587,15 +614,15 @@ app.delete('/api/products/:id', async (req, res) => {
         );
 
         if (result.affectedRows === 0) {
-            return res.status(404).json({ 
-                success: false, 
-                error: 'Produto não encontrado' 
+            return res.status(404).json({
+                success: false,
+                error: 'Produto não encontrado'
             });
         }
 
-        res.json({ 
-            success: true, 
-            message: 'Produto excluído com sucesso' 
+        res.json({
+            success: true,
+            message: 'Produto excluído com sucesso'
         });
 
     } catch (error) {
@@ -658,7 +685,20 @@ CREATE TABLE `recipes` (
 
 
 
-
+// Adicione esta rota ANTES da rota /api/recipes
+app.get('/api/recipes/categories', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [categories] = await connection.query('SELECT DISTINCT category FROM recipes ORDER BY category');
+        connection.release();
+        
+        const categoryList = categories.map(c => c.category);
+        res.json(categoryList);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
 
 
 
@@ -672,14 +712,14 @@ app.get('/api/recipes', async (req, res) => {
 
         // Base query
         let query = `
-                    SELECT r.id, r.name, r.category, r.prep_time, r.image_url, 
-                           COUNT(ri.id) as ingredients_count,
-                           SUM(CASE WHEN p.current_stock = 0 THEN 1 ELSE 0 END) as missing_ingredients
-                    FROM recipes r
-                    LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
-                    LEFT JOIN products p ON ri.product_id = p.id
-                    WHERE 1=1
-                `;
+    SELECT r.id, r.name, r.category, r.prep_time, r.image_url, 
+           COUNT(ri.id) as ingredients_count,
+           SUM(CASE WHEN p.current_stock = 0 THEN 1 ELSE 0 END) as missing_ingredients
+    FROM recipes r
+    LEFT JOIN recipe_ingredients ri ON r.id = ri.recipe_id
+    LEFT JOIN products p ON ri.product_id = p.id
+    WHERE 1=1
+`;
 
         // Add filters
         const params = [];
@@ -695,7 +735,7 @@ app.get('/api/recipes', async (req, res) => {
         }
 
         // Group and pagination
-        query += ' GROUP BY r.id ORDER BY r.name ASC LIMIT ? OFFSET ?';
+        query += ' GROUP BY r.id, r.name, r.category, r.prep_time, r.image_url ORDER BY r.name ASC LIMIT ? OFFSET ?';
         params.push(parseInt(limit), parseInt(offset));
 
         // Get recipes
@@ -720,22 +760,22 @@ app.get('/api/recipes', async (req, res) => {
         // Get categories for filter dropdown
         const [categories] = await connection.query('SELECT DISTINCT category FROM recipes ORDER BY category');
 
-        // Get recipe counts for summary cards
+        // Modifique a obtenção dos contadores para:
         const [totalRecipes] = await connection.query('SELECT COUNT(*) as total FROM recipes');
         const [popularRecipes] = await connection.query(`
-                    SELECT COUNT(*) as popular 
-                    FROM recipes r
-                    JOIN recipe_log l ON r.id = l.recipe_id
-                    WHERE l.action = 'prepared' 
-                    AND l.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-                `);
+    SELECT COUNT(DISTINCT r.id) as popular 
+    FROM recipes r
+    JOIN recipe_log l ON r.id = l.recipe_id
+    WHERE l.action = 'prepared' 
+    AND l.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+`);
         const [missingIngredients] = await connection.query(`
-                    SELECT COUNT(DISTINCT r.id) as missing
-                    FROM recipes r
-                    JOIN recipe_ingredients ri ON r.id = ri.recipe_id
-                    JOIN products p ON ri.product_id = p.id
-                    WHERE p.current_stock = 0
-                `);
+    SELECT COUNT(DISTINCT r.id) as missing
+    FROM recipes r
+    JOIN recipe_ingredients ri ON r.id = ri.recipe_id
+    JOIN products p ON ri.product_id = p.id
+    WHERE p.current_stock = 0
+`);
 
         connection.release();
 
@@ -744,7 +784,7 @@ app.get('/api/recipes', async (req, res) => {
             total: countResult[0].total,
             page: parseInt(page),
             limit: parseInt(limit),
-            categories,
+            categories: categories.map(c => c.category), // Envia array de categorias
             counts: {
                 total: totalRecipes[0].total,
                 popular: popularRecipes[0].popular,
@@ -907,20 +947,7 @@ app.delete('/api/recipes/:id', async (req, res) => {
     }
 });
 
-// Get all products for ingredient selection
-app.get('/api/products/select', async (req, res) => {
-    try {
-        const connection = await pool.getConnection();
-        const [products] = await connection.query(
-            'SELECT id, name, category, unit FROM products ORDER BY name'
-        );
-        connection.release();
-        res.json(products);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Database error' });
-    }
-});
+
 
 // Log recipe actions (prepared, viewed, etc.)
 app.post('/api/recipes/:id/log', async (req, res) => {
@@ -941,6 +968,11 @@ app.post('/api/recipes/:id/log', async (req, res) => {
         res.status(500).json({ error: 'Database error' });
     }
 });
+
+
+
+
+
 
 // Tables necessárias para essa tela
 /*
@@ -1012,7 +1044,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 // Add these endpoints after your existing routes:
 
-// Task Endpoints
+// Rotas para tarefas.html
 app.get('/api/tasks', async (req, res) => {
     console.log('Query parameters:', req.query);
     try {
@@ -1261,6 +1293,41 @@ app.get('/api/tasks/summary', async (req, res) => {
     }
 });
 
+// DELETE para categorias
+app.delete('/api/categories/:id', async (req, res) => {
+    try {
+        const categoryId = req.params.id;
+        const connection = await pool.getConnection();
+
+        await connection.query('DELETE FROM task_categories WHERE id = ?', [categoryId]);
+        connection.release();
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao excluir categoria' });
+    }
+});
+
+// Adicione no server.js a rota para marcar lembrete
+app.put('/api/tasks/:id/reminder', async (req, res) => {
+    try {
+        const taskId = req.params.id;
+        const connection = await pool.getConnection();
+
+        await connection.query(
+            'UPDATE tasks SET reminder_sent = 1 WHERE id = ?',
+            [taskId]
+        );
+
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 
 
 // END TAREFAS .HTML ----------------------------------------------------------------------------------------------------------------------------------------
@@ -1431,7 +1498,7 @@ app.delete('/api/transactions/:id', async (req, res) => {
 
 
 
-// SERVER.JS - VENDAS.HTML ----------------------------------------------------------------------------------------------------------------------------------------
+// SERVER.JS - VENDAS.HTML -----------------------------------------------------------------------------------------------------------
 
 // Rotas para Vendas
 // CRUD READ
@@ -1475,6 +1542,17 @@ app.get('/api/sales', async (req, res) => {
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// [4] Rota GET para listar todos os produtos
+app.get('/api/products', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM products');
+        res.json(rows); // << isso aqui precisa retornar um array direto
+    } catch (error) {
+        console.error('Erro GET /api/products:', error);
+        res.status(500).json({ error: 'Erro ao buscar produtos' });
     }
 });
 
@@ -1677,14 +1755,6 @@ app.put('/api/sales/:id', async (req, res) => {
         if (connection) connection.release();
     }
 });
-
-
-
-
-
-
-
-
 
 // Rota para deletar uma venda
 app.delete('/api/sales/:id', async (req, res) => {
