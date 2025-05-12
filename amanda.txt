@@ -1,11 +1,1467 @@
-Na tela dashboard ainda aparece icone de notificação.
-
-Fiz alteração nas tabelas customers e orders:
-ALTER TABLE customers ADD UNIQUE INDEX name_unique (name);
-
-ALTER TABLE orders MODIFY status ENUM('pending','preparing','ready','delivered','canceled');
+Até o momento está o que está documentando aqui é:
+Formulário de edição com os campos intens, quantidade e valor aparecendo (quantidade e valor está trazendo o dado cadastrado)
+e acho que também está funcionando o dar baixa de produto no estoque após a venda (Por precaução no final dessa página estara o 
+vendas.htm e server.js dessa parte funcionando.)
 
 VENDAS.HTML:
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vendas - Quitutes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="shortcut icon" href="img/quiIco.ico" type="image/x-icon">
+    <style>
+        /* Custom styles */
+        .sidebar {
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed {
+            width: 80px;
+        }
+
+        .sidebar.collapsed .nav-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .logo-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .nav-item {
+            justify-content: center;
+        }
+
+        .main-content {
+            transition: all 0.3s;
+        }
+
+        .sidebar.collapsed+.main-content {
+            margin-left: 80px;
+        }
+
+        .popup {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -45%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
+        }
+
+        .overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .positive-value {
+            color: #10b981;
+        }
+
+        .negative-value {
+            color: #ef4444;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        .sale-option-card {
+            transition: all 0.2s ease;
+        }
+
+        .sale-option-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        #venda-itens-container .flex.items-end {
+            margin-bottom: 0.5rem;
+            gap: 0.5rem;
+        }
+
+        #venda-itens-container select {
+            min-width: 200px;
+        }
+
+        #venda-itens-container .flex {
+            margin-bottom: 0.5rem;
+            gap: 0.5rem;
+        }
+
+        #venda-itens-container select {
+            min-width: 200px;
+            appearance: auto;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="sidebar bg-indigo-700 text-white w-64 flex flex-col fixed h-full">
+            <a href="index.html">
+                <div class="p-4 flex items-center space-x-3 border-b border-indigo-600">
+                    <div class="bg-white p-2 rounded-lg">
+                        <i class="fas fa-cookie-bite text-indigo-700 text-xl"></i>
+                    </div>
+                    <span class="logo-text font-bold text-xl">Quitutes</span>
+                </div>
+            </a>
+
+            <div class="p-4 flex-1 overflow-y-auto">
+                <nav>
+                    <ul class="space-y-2">
+                        <li>
+                            <a href="dashboard.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-tachometer-alt mr-3"></i>
+                                <span class="nav-text">Dashboard</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="estoque.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-box-open mr-3"></i>
+                                <span class="nav-text">Estoque</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="receitas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-utensils mr-3"></i>
+                                <span class="nav-text">Receitas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="tarefas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-tasks mr-3"></i>
+                                <span class="nav-text">Tarefas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="financas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                                <i class="fas fa-money-bill-wave mr-3"></i>
+                                <span class="nav-text">Finanças</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="vendas.html" class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-shopping-cart mr-3"></i>
+                                <span class="nav-text">Vendas</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="relatorios.html" class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-chart-bar mr-3"></i>
+                                <span class="nav-text">Relatórios</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="sustentabilidade.html"
+                                class="nav-item flex items-center p-3 rounded-lg bg-indigo-800">
+                                <i class="fas fa-leaf mr-3"></i>
+                                <span class="nav-text">Sustentabilidade</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+
+            <div class="p-4 border-t border-indigo-600">
+                <button id="toggle-sidebar"
+                    class="flex items-center justify-center w-full p-2 rounded-lg hover:bg-indigo-800 transition">
+                    <i class="fas fa-chevron-left"></i>
+                    <span class="nav-text ml-3">Recolher</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content ml-64 flex-1 overflow-y-auto">
+            <!-- Header -->
+            <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
+                <h1 class="text-2xl font-bold text-gray-800">
+                    <i class="fas fa-shopping-cart text-indigo-600 mr-2"></i>
+                    Vendas
+                </h1>
+            </header>
+
+            <!-- Content -->
+            <main class="p-6">
+                <!-- Error Message -->
+                <div id="mensagem-erro"
+                    class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
+                    <p id="erro-texto"></p>
+                </div>
+
+                <!-- Sales Summary -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Vendas Hoje</p>
+                                <h3 id="vendas-hoje" class="text-2xl font-semibold">R$ 0,00</h3>
+                            </div>
+                            <div class="bg-green-100 p-3 rounded-full">
+                                <i class="fas fa-calendar-day text-green-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Vendas Semana</p>
+                                <h3 id="vendas-semana" class="text-2xl font-semibold">R$ 0,00</h3>
+                            </div>
+                            <div class="bg-blue-100 p-3 rounded-full">
+                                <i class="fas fa-calendar-week text-blue-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Vendas Mês</p>
+                                <h3 id="vendas-mes" class="text-2xl font-semibold">R$ 0,00</h3>
+                            </div>
+                            <div class="bg-indigo-100 p-3 rounded-full">
+                                <i class="fas fa-calendar-alt text-indigo-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl shadow-sm p-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">Pedidos Pendentes</p>
+                                <h3 id="pedidos-pendentes" class="text-2xl font-semibold">0</h3>
+                            </div>
+                            <div class="bg-yellow-100 p-3 rounded-full">
+                                <i class="fas fa-clock text-yellow-600"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales Options -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- WhatsApp Sales -->
+                    <div class="sale-option-card bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-all duration-200"
+                        onclick="openSaleModal('whatsapp')">
+                        <div class="bg-green-100 p-4 flex items-center">
+                            <div class="bg-green-600 text-white p-3 rounded-full">
+                                <i class="fab fa-whatsapp text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="font-semibold text-lg text-gray-800">Venda pelo WhatsApp</h3>
+                                <p class="text-sm text-gray-600">Registre vendas feitas por mensagem</p>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <div class="flex items-center text-sm text-gray-500">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                <span>Clique para registrar nova venda</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- iFood Sales -->
+                    <div class="sale-option-card bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-all duration-200"
+                        onclick="openSaleModal('ifood')">
+                        <div class="bg-red-100 p-4 flex items-center">
+                            <div class="bg-red-600 text-white p-3 rounded-full">
+                                <i class="fas fa-utensils text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="font-semibold text-lg text-gray-800">Venda pelo iFood</h3>
+                                <p class="text-sm text-gray-600">Registre pedidos recebidos pelo iFood</p>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <div class="flex items-center text-sm text-gray-500">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                <span>Clique para registrar novo pedido</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- In-Person Sales -->
+                    <div class="sale-option-card bg-white rounded-xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition-all duration-200"
+                        onclick="openSaleModal('balcao')">
+                        <div class="bg-indigo-100 p-4 flex items-center">
+                            <div class="bg-indigo-600 text-white p-3 rounded-full">
+                                <i class="fas fa-store text-xl"></i>
+                            </div>
+                            <div class="ml-4">
+                                <h3 class="font-semibold text-lg text-gray-800">Venda no Balcão</h3>
+                                <p class="text-sm text-gray-600">Registre vendas presenciais na loja</p>
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <div class="flex items-center text-sm text-gray-500">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                <span>Clique para registrar nova venda</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Sales -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-gray-800">Vendas Recentes</h2>
+                        <div class="flex items-center space-x-2">
+                            <select id="tabela-ordem"
+                                class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                                <option value="data-desc">Mais recentes</option>
+                                <option value="data-asc">Mais antigas</option>
+                                <option value="valor-desc">Maior valor</option>
+                                <option value="valor-asc">Menor valor</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Número</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Data</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Cliente</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Canal</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Itens</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Valor</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-vendas" class="bg-white divide-y divide-gray-200">
+                                <!-- Sales will be loaded here -->
+                                <tr>
+                                    <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma venda
+                                        registrada recentemente</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Sale Modal -->
+    <div id="modal-venda" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div
+                class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900" id="modal-title">Nova Venda</h3>
+                        <button type="button" id="close-modal" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <form id="form-venda">
+                        <input type="hidden" id="venda-id">
+                        <input type="hidden" id="venda-canal">
+
+                        <!-- Channel Specific Info -->
+                        <div id="whatsapp-info" class="hidden mb-4 p-4 bg-green-50 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fab fa-whatsapp text-green-600 text-xl mr-2"></i>
+                                <h4 class="font-medium text-green-800">Venda pelo WhatsApp</h4>
+                            </div>
+                            <div class="mt-2">
+                                <label for="whatsapp-number" class="block text-sm font-medium text-gray-700">Número do
+                                    WhatsApp</label>
+                                <input type="text" id="whatsapp-number"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-green-500 focus:border-green-500"
+                                    placeholder="(00) 00000-0000">
+                            </div>
+                        </div>
+
+                        <div id="ifood-info" class="hidden mb-4 p-4 bg-red-50 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fas fa-utensils text-red-600 text-xl mr-2"></i>
+                                <h4 class="font-medium text-red-800">Venda pelo iFood</h4>
+                            </div>
+                            <div class="mt-2">
+                                <label for="ifood-order" class="block text-sm font-medium text-gray-700">Número do
+                                    Pedido</label>
+                                <input type="text" id="ifood-order"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-red-500 focus:border-red-500"
+                                    placeholder="IF12345678">
+                            </div>
+                        </div>
+
+                        <div id="balcao-info" class="hidden mb-4 p-4 bg-indigo-50 rounded-lg">
+                            <div class="flex items-center">
+                                <i class="fas fa-store text-indigo-600 text-xl mr-2"></i>
+                                <h4 class="font-medium text-indigo-800">Venda no Balcão</h4>
+                            </div>
+                        </div>
+
+                        <!-- Common Fields -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="venda-cliente" class="block text-sm font-medium text-gray-700">Cliente
+                                    *</label>
+                                <input type="text" id="venda-cliente"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                    required>
+                            </div>
+                            <div>
+                                <label for="venda-data" class="block text-sm font-medium text-gray-700">Data *</label>
+                                <input type="datetime-local" id="venda-data"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                    required>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="venda-itens" class="block text-sm font-medium text-gray-700">Itens *</label>
+                            <div class="mt-1 space-y-2" id="venda-itens-container">
+                                <!-- Items will be added here *****-->
+                            </div>
+                            <button type="button" onclick="addItemRow()"
+                                class="mt-2 inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <i class="fas fa-plus mr-1"></i> Adicionar Item
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="venda-valor" class="block text-sm font-medium text-gray-700">Valor Total
+                                    *</label>
+                                <input type="number" id="venda-valor" step="0.01" min="0"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                    required>
+                            </div>
+                            <div>
+                                <label for="venda-status" class="block text-sm font-medium text-gray-700">Status
+                                    *</label>
+                                <select id="venda-status"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                    required>
+                                    <option value="pending">Pendente</option>
+                                    <option value="preparing">Em preparo</option>
+                                    <option value="ready">Pronto</option>
+                                    <option value="delivered">Entregue</option>
+                                    <option value="canceled">Cancelado</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="venda-observacoes"
+                                class="block text-sm font-medium text-gray-700">Observações</label>
+                            <textarea id="venda-observacoes" rows="2"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"></textarea>
+                        </div>
+
+                        <div class="flex justify-end space-x-3">
+                            <button type="button" id="cancel-modal"
+                                class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
+                                Cancelar
+                            </button>
+                            <button type="submit"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg">
+                                Salvar Venda
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let vendas = []; // Array vazio que será preenchido pela API
+
+
+        // Toggle sidebar
+        document.getElementById('toggle-sidebar').addEventListener('click', function () {
+            document.querySelector('.sidebar').classList.toggle('collapsed');
+            document.querySelector('.main-content').classList.toggle('ml-64');
+            document.querySelector('.main-content').classList.toggle('ml-20');
+
+            const icon = this.querySelector('i');
+            if (document.querySelector('.sidebar').classList.contains('collapsed')) {
+                icon.classList.remove('fa-chevron-left');
+                icon.classList.add('fa-chevron-right');
+            } else {
+                icon.classList.remove('fa-chevron-right');
+                icon.classList.add('fa-chevron-left');
+            }
+        });
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function () {
+            carregarVendas();
+
+            // Set default date/time
+            const now = new Date();
+            const formattedDateTime = now.toISOString().slice(0, 16);
+            document.getElementById('venda-data').value = formattedDateTime;
+        });
+
+        async function carregarVendas() {
+            try {
+                console.log('Iniciando carregamento de vendas...');
+
+                // Carrega as vendas
+                const response = await fetch('/api/sales');
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP: ${response.status}`);
+                }
+
+                const vendas = await response.json();
+                console.log('Dados recebidos:', vendas);
+
+                // Garante que vendas seja um array
+                const dadosVendas = Array.isArray(vendas) ? vendas : [];
+                console.log('Dados formatados:', dadosVendas);
+
+                renderizarTabelaVendas(dadosVendas);
+
+                // Carrega o resumo
+                const summaryResponse = await fetch('/api/sales/summary');
+                if (!summaryResponse.ok) {
+                    throw new Error(`Erro HTTP: ${summaryResponse.status}`);
+                }
+
+                const summary = await summaryResponse.json();
+                console.log('Resumo recebido:', summary);
+
+                // Garante valores padrão
+                atualizarResumo({
+                    today: summary?.today || 0,
+                    week: summary?.week || 0,
+                    month: summary?.month || 0,
+                    pending: summary?.pending || 0
+                });
+                if (summary) {
+                    document.getElementById('vendas-hoje').textContent = `R$ ${summary.today.toFixed(2).replace('.', ',')}`;
+                    document.getElementById('vendas-semana').textContent = `R$ ${summary.week.toFixed(2).replace('.', ',')}`;
+                    document.getElementById('vendas-mes').textContent = `R$ ${summary.month.toFixed(2).replace('.', ',')}`;
+                    document.getElementById('pedidos-pendentes').textContent = summary.pending;
+                }
+
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                mostrarMensagem(error.message, 'error');
+
+                // Renderiza tabela vazia
+                renderizarTabelaVendas([]);
+                atualizarResumo({
+                    today: 0,
+                    week: 0,
+                    month: 0,
+                    pending: 0
+                });
+            }
+        }
+
+        function atualizarResumo(summary) {
+            const formatarMoeda = (valor) => `R$ ${valor.toFixed(2).replace('.', ',')}`;
+
+            document.getElementById('vendas-hoje').textContent = formatarMoeda(summary.today);
+            document.getElementById('vendas-semana').textContent = formatarMoeda(summary.week);
+            document.getElementById('vendas-mes').textContent = formatarMoeda(summary.month);
+            document.getElementById('pedidos-pendentes').textContent = summary.pending;
+        }
+
+        // Modifique a função atualizarResumo():
+        function atualizarResumo(summary) {
+            document.getElementById('vendas-hoje').textContent =
+                `R$ ${summary.today.toFixed(2).replace('.', ',')}`;
+
+            document.getElementById('vendas-semana').textContent =
+                `R$ ${summary.week.toFixed(2).replace('.', ',')}`;
+
+            document.getElementById('vendas-mes').textContent =
+                `R$ ${summary.month.toFixed(2).replace('.', ',')}`;
+
+            document.getElementById('pedidos-pendentes').textContent =
+                summary.pending;
+        }
+
+        // Render sales table
+        function renderizarTabelaVendas(vendasData) {
+            const container = document.getElementById('tabela-vendas');
+            container.innerHTML = '';
+
+            if (!vendasData || !Array.isArray(vendasData)) {
+                container.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma venda registrada recentemente</td>
+            </tr>
+        `;
+                return;
+            }
+
+            if (vendasData.length === 0) {
+                container.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Nenhuma venda registrada recentemente</td>
+            </tr>
+        `;
+                return;
+            }
+
+            // Sort sales
+            const order = document.getElementById('tabela-ordem').value;
+            let sortedVendas = [...vendasData];
+
+            switch (order) {
+                case 'data-desc':
+                    sortedVendas.sort((a, b) => new Date(b.order_date || b.data) - new Date(a.order_date || a.data));
+                    break;
+                case 'data-asc':
+                    sortedVendas.sort((a, b) => new Date(a.order_date || a.data) - new Date(b.order_date || b.data));
+                    break;
+                case 'valor-desc':
+                    sortedVendas.sort((a, b) => (parseFloat(b.total_amount) || parseFloat(b.valorTotal) || 0) - (parseFloat(a.total_amount) || parseFloat(a.valorTotal) || 0));
+                    break;
+                case 'valor-asc':
+                    sortedVendas.sort((a, b) => (parseFloat(a.total_amount) || parseFloat(a.valorTotal) || 0) - (parseFloat(b.total_amount) || parseFloat(b.valorTotal) || 0));
+                    break;
+            }
+
+            sortedVendas.forEach(venda => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+
+                // Format date
+                const date = new Date(venda.order_date || venda.data);
+                const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+                // Format channel
+                let channelIcon, channelColor;
+                const channel = venda.channel || venda.canal;
+                switch (channel) {
+                    case 'whatsapp':
+                        channelIcon = 'fab fa-whatsapp';
+                        channelColor = 'text-green-600';
+                        break;
+                    case 'ifood':
+                        channelIcon = 'fas fa-utensils';
+                        channelColor = 'text-red-600';
+                        break;
+                    case 'balcao':
+                        channelIcon = 'fas fa-store';
+                        channelColor = 'text-indigo-600';
+                        break;
+                }
+
+                // Modifique a seção de status para:
+                let statusColor, statusText;
+                const statusMap = {
+                    'pending': { text: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
+                    'preparing': { text: 'Em Preparo', color: 'bg-blue-100 text-blue-800' },
+                    'ready': { text: 'Pronto', color: 'bg-blue-100 text-blue-800' },
+                    'delivered': { text: 'Entregue', color: 'bg-green-100 text-green-800' },
+                    'canceled': { text: 'Cancelado', color: 'bg-red-100 text-red-800' }
+                };
+
+                const statusInfo = statusMap[venda.status] || { text: 'Desconhecido', color: 'bg-gray-100 text-gray-800' };
+                statusText = statusInfo.text;
+                statusColor = statusInfo.color;
+
+                // Format items
+                const items = venda.items || venda.itens || [];
+                const itemsText = items.map(item =>
+                    `${item.quantity || item.quantidade}x ${item.product || item.produto}`
+                ).join(', ');
+
+                // Format total amount - garantindo que é um número
+                const totalAmount = parseFloat(venda.total_amount || venda.valorTotal || 0);
+                const formattedTotal = isNaN(totalAmount) ? '0,00' : totalAmount.toFixed(2).replace('.', ',');
+
+                row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                     ${venda.order_number} <!-- ADD THIS -->
+                </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${formattedDate}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                ${venda.customer_name || venda.cliente || 'Sem nome'}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <i class="${channelIcon} ${channelColor} mr-1"></i>
+                ${channel === 'whatsapp' ? 'WhatsApp' : channel === 'ifood' ? 'iFood' : 'Balcão'}
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500">
+                ${itemsText}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                R$ ${formattedTotal}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor}">
+                    ${statusText}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button onclick="editarVenda(${venda.id})" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button onclick="excluirVenda(${venda.id})" class="text-red-600 hover:text-red-900">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        `;
+
+                container.appendChild(row);
+            });
+        }
+
+        // Open sale modal for specific channel
+        function openSaleModal(channel) {
+            // Reset form
+            document.getElementById('form-venda').reset();
+            document.getElementById('venda-id').value = '';
+            document.getElementById('venda-canal').value = channel;
+
+            // Hide all channel info sections
+            document.getElementById('whatsapp-info').classList.add('hidden');
+            document.getElementById('ifood-info').classList.add('hidden');
+            document.getElementById('balcao-info').classList.add('hidden');
+
+            // Show the correct channel info
+            if (channel === 'whatsapp') {
+                document.getElementById('whatsapp-info').classList.remove('hidden');
+                document.getElementById('modal-title').textContent = 'Nova Venda pelo WhatsApp';
+            } else if (channel === 'ifood') {
+                document.getElementById('ifood-info').classList.remove('hidden');
+                document.getElementById('modal-title').textContent = 'Novo Pedido pelo iFood';
+            } else {
+                document.getElementById('balcao-info').classList.remove('hidden');
+                document.getElementById('modal-title').textContent = 'Nova Venda no Balcão';
+            }
+
+            // Clear items container
+            document.getElementById('venda-itens-container').innerHTML = '';
+
+            // Add one empty item row
+            addItemRow();
+
+            // Set default date/time
+            const now = new Date();
+            const formattedDateTime = now.toISOString().slice(0, 16);
+            document.getElementById('venda-data').value = formattedDateTime;
+
+            openModal('modal-venda');
+        }
+
+        function addItemRow(item = { produto: '', quantidade: 1, valor: 0 }) {
+            const container = document.getElementById('venda-itens-container');
+            const itemId = Date.now();
+
+            const row = document.createElement('div');
+            row.className = 'flex items-end space-x-2';
+            row.id = `item-${itemId}`;
+
+            row.innerHTML = `
+    <div class="flex-1">
+        <label for="item-produto-${itemId}" class="block text-xs font-medium text-gray-500">Produto</label>
+        <select id="item-produto-${itemId}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
+            <option value="">Selecione...</option>
+        </select>
+    </div>
+    <div class="w-20">
+        <label for="item-quantidade-${itemId}" class="block text-xs font-medium text-gray-500">Qtd</label>
+        <input type="number" id="item-quantidade-${itemId}" value="${item.quantidade}" min="1" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
+    </div>
+    <div class="w-24">
+        <label for="item-valor-${itemId}" class="block text-xs font-medium text-gray-500">Valor</label>
+        <input type="number" id="item-valor-${itemId}" value="${item.valor}" step="0.01" min="0" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
+    </div>
+    <button type="button" onclick="removeItemRow('${itemId}')" class="mb-1 text-red-500 hover:text-red-700">
+        <i class="fas fa-times"></i>
+    </button>
+    `;
+
+            container.appendChild(row);
+
+            // Popula o select com os produtos
+            fetch('/api/products')
+                .then(res => res.json())
+                .then(produtos => {
+                    const select = document.getElementById(`item-produto-${itemId}`);
+                    select.innerHTML = '<option value="">Selecione...</option>';
+
+                    produtos.forEach(produto => {
+                        const option = document.createElement('option');
+                        option.value = produto.id;
+                        option.textContent = produto.name;
+                        // Selecionar o produto correto
+                        if (produto.id.toString() === item.produto.toString()) {
+                            option.selected = true;
+                        }
+                        select.appendChild(option);
+                    });
+                });
+
+            // Atualiza o total quando houver mudanças
+            const inputs = row.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.addEventListener('input', calculateTotal);
+            });
+
+            calculateTotal();
+        }
+
+
+        // Remove item row from sale form
+        function removeItemRow(itemId) {
+            const row = document.getElementById(`item-${itemId}`);
+            if (row) row.remove();
+            calculateTotal();
+        }
+
+        // Calculate total value of sale
+        function calculateTotal() {
+            let total = 0;
+            const items = document.getElementById('venda-itens-container').children;
+
+            for (let i = 0; i < items.length; i++) {
+                const itemId = items[i].id.replace('item-', '');
+                const quantidade = parseFloat(document.getElementById(`item-quantidade-${itemId}`).value) || 0;
+                const valor = parseFloat(document.getElementById(`item-valor-${itemId}`).value) || 0;
+                total += quantidade * valor;
+            }
+
+            document.getElementById('venda-valor').value = total.toFixed(2);
+        }
+
+        // Edit sale - Versão integrada com API
+        async function editarVenda(id) {
+            try {
+                const response = await fetch(`/api/sales/${id}`);
+                if (!response.ok) throw new Error('Erro ao carregar venda');
+                const venda = await response.json();
+                console.log('Dados para edição:', venda);
+
+                // Preencher campos básicos
+                document.getElementById('venda-id').value = venda.id;
+                document.getElementById('venda-cliente').value = venda.customer_name || venda.customer;
+                document.getElementById('venda-data').value = new Date(venda.order_date).toISOString().slice(0, 16);
+                document.getElementById('venda-valor').value = venda.total_amount;
+                document.getElementById('venda-status').value = venda.status;
+                document.getElementById('venda-observacoes').value = venda.notes || '';
+
+                // Canal específico
+                document.getElementById('venda-canal').value = venda.channel;
+                document.querySelectorAll('[id$="-info"]').forEach(el => el.classList.add('hidden'));
+                if (venda.channel === 'whatsapp') {
+                    document.getElementById('whatsapp-info').classList.remove('hidden');
+                    document.getElementById('whatsapp-number').value = venda.whatsapp_number || '';
+                } else if (venda.channel === 'ifood') {
+                    document.getElementById('ifood-info').classList.remove('hidden');
+                    document.getElementById('ifood-order').value = venda.ifood_order || '';
+                }
+
+                // Itens
+                const container = document.getElementById('venda-itens-container');
+                container.innerHTML = '';
+                venda.items.forEach(item => {
+                    addItemRow({
+                        produto: item.product, // ID do produto
+                        quantidade: item.quantity,
+                        valor: item.valor
+                    });
+                });
+
+                document.getElementById('modal-title').textContent = 'Editar Venda';
+                openModal('modal-venda');
+
+            } catch (error) {
+                console.error('Erro ao editar:', error);
+                mostrarMensagem('Falha ao carregar venda para edição', 'error');
+            }
+        }
+
+        // Delete sale - Versão integrada com API
+        async function excluirVenda(id) {
+            if (confirm('Tem certeza que deseja excluir esta venda?')) {
+                try {
+                    const response = await fetch(`/api/sales/${id}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (!response.ok) throw new Error('Erro ao excluir venda');
+
+                    await carregarVendas(); // Recarrega a lista atualizada
+                    mostrarMensagem('Venda excluída com sucesso!', 'success');
+                } catch (error) {
+                    console.error('Erro ao excluir venda:', error);
+                    mostrarMensagem(error.message || 'Erro ao excluir venda', 'error');
+                }
+            }
+        }
+
+        document.getElementById('form-venda').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                customer: document.getElementById('venda-cliente').value,
+                channel: document.getElementById('venda-canal').value,
+                status: document.getElementById('venda-status').value,
+                observations: document.getElementById('venda-observacoes').value,
+                total: parseFloat(document.getElementById('venda-valor').value),
+                channelData: {},
+                items: []
+            };
+
+            // Coletar dados do canal
+            if (formData.channel === 'whatsapp') {
+                formData.channelData.whatsapp = document.getElementById('whatsapp-number').value;
+            } else if (formData.channel === 'ifood') {
+                formData.channelData.ifood = document.getElementById('ifood-order').value;
+            }
+
+            // Coletar itens
+            document.querySelectorAll('#venda-itens-container > div').forEach(item => {
+                const id = item.id.replace('item-', '');
+                formData.items.push({
+                    product: document.getElementById(`item-produto-${id}`).value,
+                    quantity: parseFloat(document.getElementById(`item-quantidade-${id}`).value),
+                    valor: parseFloat(document.getElementById(`item-valor-${id}`).value)
+                });
+            });
+
+            try {
+                const vendaId = document.getElementById('venda-id').value;
+                const url = vendaId ? `/api/sales/${vendaId}` : '/api/sales';
+                const method = vendaId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) throw new Error(await response.text());
+
+                closeModal('modal-venda');
+                await carregarVendas();
+                mostrarMensagem(`Venda ${vendaId ? 'atualizada' : 'registrada'} com sucesso!`, 'success');
+
+            } catch (error) {
+                console.error('Erro:', error);
+                mostrarMensagem(error.message || 'Erro ao processar venda', 'error');
+            }
+        });
+
+        // Modal functions
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // Event listeners for modals
+        document.getElementById('close-modal').addEventListener('click', () => closeModal('modal-venda'));
+        document.getElementById('cancel-modal').addEventListener('click', () => closeModal('modal-venda'));
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === document.getElementById('modal-venda')) {
+                closeModal('modal-venda');
+            }
+        });
+
+        // Show error/success message
+        function mostrarMensagem(texto, tipo = 'error') {
+            const mensagem = document.getElementById('mensagem-erro');
+            const textoElemento = document.getElementById('erro-texto');
+
+            textoElemento.textContent = texto;
+
+            if (tipo === 'error') {
+                mensagem.className = 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded';
+            } else {
+                mensagem.className = 'bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded';
+            }
+
+            mensagem.classList.remove('hidden');
+
+            setTimeout(() => {
+                mensagem.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Table order change
+        document.getElementById('tabela-ordem').addEventListener('change', renderizarTabelaVendas);
+
+        // Script: pagina atual sombra (corrigido)
+        document.addEventListener('DOMContentLoaded', function () {
+            // Remove sombra de todos
+            document.querySelectorAll('.sidebar .nav-item').forEach(function (link) {
+                link.classList.remove('bg-indigo-800');
+            });
+
+            // Aplica sombra apenas ao item correto
+            document.querySelectorAll('.sidebar .nav-item').forEach(function (link) {
+                const href = link.getAttribute('href');
+                if (
+                    (window.location.pathname.endsWith('dashboard.html') || window.location.pathname.endsWith('index.html')) &&
+                    (href === '#' || href === 'dashboard.html' || href === 'index.html')
+                ) {
+                    link.classList.add('bg-indigo-800');
+                } else if (
+                    href &&
+                    href !== '#' &&
+                    window.location.pathname.endsWith(href)
+                ) {
+                    link.classList.add('bg-indigo-800');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
+
+
+// SERVER.JS - VENDAS.HTML --------------------------------------------------------------------------------------------------------
+// CRUD READ
+app.get('/api/sales', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        // Query corrigida com JOIN
+        const [orders] = await connection.query(`
+            SELECT 
+                o.id,
+                o.order_number,
+                o.status,
+                o.total_amount,
+                o.order_date,
+                o.channel,
+                c.name AS customer_name,
+                o.ifood_order
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id 
+            ORDER BY o.order_date DESC
+        `);
+
+        // Query dos itens mantida igual
+        const [items] = await connection.query(`
+            SELECT oi.order_id, p.name as product, oi.quantity, oi.unit_price
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+        `);
+
+        connection.release();
+
+        const sales = orders.map(order => ({
+            ...order,
+            items: items.filter(item => item.order_id === order.id).map(item => ({
+                product: item.product,
+                quantity: item.quantity,
+                valor: item.unit_price
+            })),
+            order_date: new Date(order.order_date).toISOString()
+        }));
+
+        res.json(sales);
+
+    } catch (error) {
+        console.error('Erro em /api/sales:', error);
+        res.status(500).json({
+            error: 'Database error',
+            details: error.message // Adicione esta linha para ver o erro exato
+        });
+    }
+});
+
+
+
+// [4] Rota GET para listar todos os produtos
+app.get('/api/products', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM products');
+        res.json(rows); // << isso aqui precisa retornar um array direto
+    } catch (error) {
+        console.error('Erro GET /api/products:', error);
+        res.status(500).json({ error: 'Erro ao buscar produtos' });
+    }
+});
+
+// CRUD READ - Detalhes da venda
+app.get('/api/sales/summary', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        const [today] = await connection.query(`
+            SELECT IFNULL(SUM(total_amount), 0) as total
+            FROM orders
+            WHERE DATE(order_date) = CURDATE()
+        `);
+
+        const [week] = await connection.query(`
+            SELECT IFNULL(SUM(total_amount), 0) as total
+            FROM orders
+            WHERE YEARWEEK(order_date) = YEARWEEK(CURDATE())
+        `);
+
+        const [month] = await connection.query(`
+            SELECT IFNULL(SUM(total_amount), 0) as total
+            FROM orders
+            WHERE MONTH(order_date) = MONTH(CURDATE())
+            AND YEAR(order_date) = YEAR(CURDATE())
+        `);
+
+        const [pending] = await connection.query(`
+            SELECT COUNT(*) as count
+            FROM orders
+            WHERE status IN ('pending', 'preparing')
+        `);
+
+        connection.release();
+
+        // Garante que os valores sejam números
+        res.json({
+            today: parseFloat(today[0].total) || 0,
+            week: parseFloat(week[0].total) || 0,
+            month: parseFloat(month[0].total) || 0,
+            pending: parseInt(pending[0].count) || 0
+        });
+    } catch (error) {
+        console.error(error);
+        // Retorna valores padrão em caso de erro
+        res.json({
+            today: 0,
+            week: 0,
+            month: 0,
+            pending: 0
+        });
+    }
+});
+
+// CRUD CREATE - Rota corrigida
+app.post('/api/sales', async (req, res) => {
+    let connection;
+    try {
+        console.log('---------- NOVA REQUISIÇÃO ----------');
+        console.log('Body recebido:', JSON.stringify(req.body, null, 2));
+        const { customer, channel, items, total, status, observations, channelData } = req.body;
+
+        // Validação básica
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            console.error('Erro: Items array inválido');
+            return res.status(400).json({ error: "Lista de itens inválida" });
+        }
+
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        // 1. Verificar estoque para todos os itens
+        console.log('Iniciando verificação de estoque...');
+        const stockErrors = [];
+        const productsToUpdate = [];
+
+        for (const [index, item] of items.entries()) {
+            console.log(`Processando item ${index + 1}:`, item);
+
+            if (!item.product || !item.quantity) {
+                throw new Error(`Item ${index + 1} está incompleto`);
+            }
+
+            const [product] = await connection.query(
+                `SELECT id, name, current_stock 
+                 FROM products 
+                 WHERE id = ? 
+                 LIMIT 1`,
+                [parseInt(item.product)]
+            );
+
+            console.log(`Resultado da consulta do produto ${item.product}:`, product[0]);
+
+            if (!product.length) {
+                throw new Error(`Produto ID ${item.product} não encontrado`);
+            }
+
+            if (product[0].current_stock < item.quantity) {
+                console.warn(`Estoque insuficiente para ${product[0].name}`);
+                stockErrors.push({
+                    product: product[0].name,
+                    available: product[0].current_stock,
+                    requested: item.quantity
+                });
+            } else {
+                console.log(`Estoque suficiente para ${product[0].name}`);
+                productsToUpdate.push({
+                    id: product[0].id,
+                    quantity: item.quantity
+                });
+            }
+        }
+
+        if (stockErrors.length > 0) {
+            console.error('Erros de estoque:', stockErrors);
+            await connection.rollback();
+            return res.status(400).json({
+                error: "Estoque insuficiente",
+                details: stockErrors
+            });
+        }
+
+        // 2. Criar order_number
+        const [counter] = await connection.query(
+            `SELECT MAX(CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)) AS last_seq 
+             FROM orders 
+             WHERE order_number LIKE ?`,
+            [`${new Date().getFullYear()}%`]
+        );
+        const sequence = (counter[0].last_seq || 0) + 1;
+        const orderNumber = `${new Date().getFullYear()}-${sequence.toString().padStart(4, '0')}`;
+
+        // 3. Criar ou buscar cliente
+        const [customerResult] = await connection.query(
+            `INSERT INTO customers (name) VALUES (?) 
+             ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)`,
+            [customer]
+        );
+
+        // 4. Inserir a ordem principal
+        const [orderResult] = await connection.query(
+            `INSERT INTO orders (
+                order_number,
+                customer_id, 
+                total_amount, 
+                status, 
+                notes,
+                channel,
+                whatsapp_number,
+                ifood_order,
+                attendant
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                orderNumber,
+                customerResult.insertId,
+                total,
+                status,
+                observations || null,
+                channel,
+                channelData?.whatsapp || null,
+                channelData?.ifood || null,
+                channelData?.attendant || null
+            ]
+        );
+
+        // 5. Inserir itens do pedido
+        for (const item of items) {
+            const [prod] = await connection.query(
+                'SELECT id FROM products WHERE id = ?',
+                [item.product]
+            );
+
+            await connection.query(
+                `INSERT INTO order_items 
+         (order_id, product_id, quantity, unit_price)
+         VALUES (?, ?, ?, ?)`,
+                [
+                    orderResult.insertId,
+                    prod[0].id,
+                    item.quantity,
+                    item.valor
+                ]
+            );
+        }
+
+        // 6. Atualizar estoques
+        for (const product of productsToUpdate) {
+            await connection.query(
+                `UPDATE products 
+                 SET current_stock = current_stock - ? 
+                 WHERE id = ?`,
+                [product.quantity, product.id]
+            );
+        }
+
+        await connection.commit();
+        res.json({ success: true, message: 'Venda registrada com sucesso!' });
+
+    } catch (error) {
+        console.error('Erro durante o processamento:', error.message);
+        console.error(error.stack);
+        if (connection) await connection.rollback();
+        res.status(500).json({
+            error: error.message || "Erro interno no servidor",
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    } finally {
+        if (connection) {
+            console.log('Liberando conexão...');
+            connection.release();
+        }
+    }
+});
+
+// CRUD READ Rota para buscar uma venda específica
+app.get('/api/sales/:id', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+
+        const [order] = await connection.query(`
+            SELECT 
+                o.*, 
+                c.name as customer_name,
+                o.customer_id
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.id
+            WHERE o.id = ?
+        `, [req.params.id]);
+
+        if (!order.length) {
+            connection.release();
+            return res.status(404).json({ error: 'Venda não encontrada' });
+        }
+
+        const [items] = await connection.query(`
+            SELECT 
+                product_id as product,  -- Garantir o alias correto
+                quantity,
+                unit_price as valor
+            FROM order_items
+            WHERE order_id = ?
+        `, [req.params.id]);
+
+        connection.release();
+
+        res.json({
+            ...order[0],
+            items: items, // Estrutura simplificada
+            customer: order[0].customer_id // ID do cliente para o formulário
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro no banco de dados' });
+    }
+});
+
+
+// CRUD UPDATE 
+app.put('/api/sales/:id', async (req, res) => {
+    let connection;
+    try {
+        const { id } = req.params;
+        const { status, observations } = req.body;
+        connection = await pool.getConnection();
+
+        await connection.query(
+            `UPDATE orders SET
+                status = ?,
+                notes = ?
+             WHERE id = ?`,
+            [status, observations, id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Venda atualizada com sucesso!'
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            error: 'Erro ao atualizar venda',
+            details: error.message
+        });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+// Rota para deletar uma venda
+app.delete('/api/sales/:id', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        await connection.query('DELETE FROM order_items WHERE order_id = ?', [req.params.id]);
+        await connection.query('DELETE FROM orders WHERE id = ?', [req.params.id]);
+
+        await connection.commit();
+        connection.release();
+
+        res.json({ success: true });
+    } catch (error) {
+        await connection.rollback();
+        connection.release();
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+// END VENDAS .HTML ------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---------------------------------- ABAIXO ESTÁ O CÓDIGO DE DAR BAIXA NO ESTOQUE --------------------------------------------------
+Na tela VENDAS.HTML ao fazer a venda não estava diminuindo a quantidade do produto no estoque mas  .... agora está!
+
+VENDAS.HTML:
+
 <!DOCTYPE html>
 <html lang="pt-br">
 
@@ -920,7 +2376,7 @@ VENDAS.HTML:
                 mostrarMensagem('Erro ao carregar venda para edição', 'error');
             }
         }
-        
+
         // Delete sale - Versão integrada com API
         async function excluirVenda(id) {
             if (confirm('Tem certeza que deseja excluir esta venda?')) {
@@ -943,6 +2399,31 @@ VENDAS.HTML:
         document.getElementById('form-venda').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+            // Verificação de estoque no client-side (opcional)
+            const stockWarnings = [];
+            const items = document.querySelectorAll('#venda-itens-container > div');
+
+            for (const item of items) {
+                const productId = item.querySelector('select').value;
+                const quantity = parseInt(item.querySelector('input[type="number"]').value);
+
+                const response = await fetch(`/api/products/${productId}`);
+                const product = await response.json();
+
+                if (product.current_stock < quantity) {
+                    stockWarnings.push({
+                        product: product.name,
+                        available: product.current_stock
+                    });
+                }
+            }
+
+            if (stockWarnings.length > 0) {
+                mostrarMensagem(`Estoque insuficiente para: ${stockWarnings.map(p => `${p.product} (${p.available})`).join(', ')
+                    }`, 'error');
+                return;
+            }
+            
             const formData = {
                 customer: document.getElementById('venda-cliente').value,
                 channel: document.getElementById('venda-canal').value,
@@ -1065,14 +2546,14 @@ VENDAS.HTML:
 
 </html>
 
-SERVER.JS:
-// SERVER.JS - VENDAS.HTML --------------------------------------------------------------------------------------------------------------------------
-// Rotas para Vendas
+
+
+// SERVER.JS - VENDAS.HTML --------------------------------------------------------------------
 // CRUD READ
 app.get('/api/sales', async (req, res) => {
     try {
         const connection = await pool.getConnection();
-        
+
         // Query corrigida com JOIN
         const [orders] = await connection.query(`
             SELECT 
@@ -1187,48 +2668,88 @@ app.get('/api/sales/summary', async (req, res) => {
 app.post('/api/sales', async (req, res) => {
     let connection;
     try {
-        console.log("[1] Body recebido:", JSON.stringify(req.body, null, 2)); // Log detalhado
+        console.log('---------- NOVA REQUISIÇÃO ----------');
+        console.log('Body recebido:', JSON.stringify(req.body, null, 2));
         const { customer, channel, items, total, status, observations, channelData } = req.body;
+
+        // Validação básica
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            console.error('Erro: Items array inválido');
+            return res.status(400).json({ error: "Lista de itens inválida" });
+        }
 
         connection = await pool.getConnection();
         await connection.beginTransaction();
-        console.log("[2] Conexão com banco estabelecida");
 
-        // Modifique a geração do order_number:
+        // 1. Verificar estoque para todos os itens
+        console.log('Iniciando verificação de estoque...');
+        const stockErrors = [];
+        const productsToUpdate = [];
+
+        for (const [index, item] of items.entries()) {
+            console.log(`Processando item ${index + 1}:`, item);
+
+            if (!item.product || !item.quantity) {
+                throw new Error(`Item ${index + 1} está incompleto`);
+            }
+
+            const [product] = await connection.query(
+                `SELECT id, name, current_stock 
+                 FROM products 
+                 WHERE id = ? 
+                 LIMIT 1`,
+                [parseInt(item.product)]
+            );
+
+            console.log(`Resultado da consulta do produto ${item.product}:`, product[0]);
+
+            if (!product.length) {
+                throw new Error(`Produto ID ${item.product} não encontrado`);
+            }
+
+            if (product[0].current_stock < item.quantity) {
+                console.warn(`Estoque insuficiente para ${product[0].name}`);
+                stockErrors.push({
+                    product: product[0].name,
+                    available: product[0].current_stock,
+                    requested: item.quantity
+                });
+            } else {
+                console.log(`Estoque suficiente para ${product[0].name}`);
+                productsToUpdate.push({
+                    id: product[0].id,
+                    quantity: item.quantity
+                });
+            }
+        }
+
+        if (stockErrors.length > 0) {
+            console.error('Erros de estoque:', stockErrors);
+            await connection.rollback();
+            return res.status(400).json({
+                error: "Estoque insuficiente",
+                details: stockErrors
+            });
+        }
+
+        // 2. Criar order_number
         const [counter] = await connection.query(
             `SELECT MAX(CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)) AS last_seq 
-     FROM orders 
-     WHERE order_number LIKE ?`,
+             FROM orders 
+             WHERE order_number LIKE ?`,
             [`${new Date().getFullYear()}%`]
         );
         const sequence = (counter[0].last_seq || 0) + 1;
         const orderNumber = `${new Date().getFullYear()}-${sequence.toString().padStart(4, '0')}`;
-        console.log("[5] Order Number gerado:", orderNumber);
 
-        // Modifique o mapeamento de status para:
-        const statusMap = {
-            'pendente': 'pending',
-            'preparo': 'preparing',
-            'pronto': 'ready',
-            'entregue': 'delivered',
-            'cancelado': 'canceled'
-        };
-        const mappedStatus = statusMap[status] || 'pending';
-
-        console.log('Status mapeado:', mappedStatus); // Adicione este log
-
-        // 1. Criar ou buscar cliente
-        // Modifique a query de cliente para:
+        // 3. Criar ou buscar cliente
         const [customerResult] = await connection.query(
             `INSERT INTO customers (name) VALUES (?) 
-     ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)`,
+             ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)`,
             [customer]
         );
-        console.log("[3] Resultado do cliente:", customerResult);
 
-        console.log('Cliente result:', customerResult); // Adicione este log
-
-        // 2. Criar a ordem com order_number e status mapeado
+        // 4. Inserir a ordem principal
         const [orderResult] = await connection.query(
             `INSERT INTO orders (
                 order_number,
@@ -1245,7 +2766,7 @@ app.post('/api/sales', async (req, res) => {
                 orderNumber,
                 customerResult.insertId,
                 total,
-                mappedStatus,
+                status,
                 observations || null,
                 channel,
                 channelData?.whatsapp || null,
@@ -1254,49 +2775,50 @@ app.post('/api/sales', async (req, res) => {
             ]
         );
 
-        // 3. Inserir itens com validação de produto
-        // Modifique o loop de itens para:
+        // 5. Inserir itens do pedido
         for (const item of items) {
-            console.log("[4] Processando item:", item);
-
-            // Verificar se o produto existe
-            // server.js - No loop de itens
-            const [product] = await connection.query(
-                `SELECT id FROM products WHERE id = ? LIMIT 1`,
-                [parseInt(item.product)] // Converte para número
+            const [prod] = await connection.query(
+                'SELECT id FROM products WHERE id = ?',
+                [item.product]
             );
-
-            if (!product.length) {
-                throw new Error(`Produto ID ${item.product} não encontrado`);
-            }
 
             await connection.query(
                 `INSERT INTO order_items 
          (order_id, product_id, quantity, unit_price)
          VALUES (?, ?, ?, ?)`,
-                [orderResult.insertId, product[0].id, item.quantity, item.valor]
+                [
+                    orderResult.insertId,
+                    prod[0].id,
+                    item.quantity,
+                    item.valor
+                ]
+            );
+        }
+
+        // 6. Atualizar estoques
+        for (const product of productsToUpdate) {
+            await connection.query(
+                `UPDATE products 
+                 SET current_stock = current_stock - ? 
+                 WHERE id = ?`,
+                [product.quantity, product.id]
             );
         }
 
         await connection.commit();
-        res.json({
-            success: true,
-            id: orderResult.insertId,
-            message: 'Venda registrada com sucesso!'
-        });
+        res.json({ success: true, message: 'Venda registrada com sucesso!' });
 
     } catch (error) {
-        console.error("[ERRO CRÍTICO]", error.message);
-        console.error("Stack Trace:", error.stack); // Log do stack trace
+        console.error('Erro durante o processamento:', error.message);
+        console.error(error.stack);
         if (connection) await connection.rollback();
         res.status(500).json({
-            error: "Erro interno",
-            details: error.message,
-            sqlError: error.sqlMessage // Se aplicável
+            error: error.message || "Erro interno no servidor",
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     } finally {
         if (connection) {
-            console.log("[FIM] Liberando conexão");
+            console.log('Liberando conexão...');
             connection.release();
         }
     }
@@ -1394,6 +2916,4 @@ app.delete('/api/sales/:id', async (req, res) => {
     }
 });
 
-
-// END VENDAS .HTML ------------------------------------------------------------------------------------------------------------
-Na tela vendas ainda falta adicionar (talvez) um <select> junto com as <option> na função editarVendas() igual tem na função addItemRow().
+// END VENDAS .HTML ---------------------------------------------------------------
