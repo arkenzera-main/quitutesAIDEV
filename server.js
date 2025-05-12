@@ -1540,28 +1540,29 @@ app.delete('/api/transactions/:id', async (req, res) => {
 
 
 
-// SERVER.JS - VENDAS.HTML -----------------------------------------------------------------------------------------------------------
-
-// Rotas para Vendas
+/// SERVER.JS - VENDAS.HTML --------------------------------------------------------------------------------------------------------
 // CRUD READ
 app.get('/api/sales', async (req, res) => {
     try {
         const connection = await pool.getConnection();
 
+        // Query corrigida com JOIN
         const [orders] = await connection.query(`
-            SELECT o.*, c.name as customer_name,
+            SELECT 
+                o.id,
+                o.order_number,
+                o.status,
+                o.total_amount,
+                o.order_date,
                 o.channel,
-                o.whatsapp_number,
-                o.ifood_order,
-                o.attendant,
-                COUNT(oi.id) as items_count
+                c.name AS customer_name,
+                o.ifood_order
             FROM orders o
-            LEFT JOIN customers c ON o.customer_id = c.id
-            LEFT JOIN order_items oi ON o.id = oi.order_id
-            GROUP BY o.id
+            LEFT JOIN customers c ON o.customer_id = c.id 
             ORDER BY o.order_date DESC
         `);
 
+        // Query dos itens mantida igual
         const [items] = await connection.query(`
             SELECT oi.order_id, p.name as product, oi.quantity, oi.unit_price
             FROM order_items oi
@@ -1581,11 +1582,17 @@ app.get('/api/sales', async (req, res) => {
         }));
 
         res.json(sales);
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Database error' });
+        console.error('Erro em /api/sales:', error);
+        res.status(500).json({
+            error: 'Database error',
+            details: error.message // Adicione esta linha para ver o erro exato
+        });
     }
 });
+
+
 
 // [4] Rota GET para listar todos os produtos
 app.get('/api/products', async (req, res) => {
@@ -1653,20 +1660,91 @@ app.get('/api/sales/summary', async (req, res) => {
 app.post('/api/sales', async (req, res) => {
     let connection;
     try {
+        console.log('---------- NOVA REQUISIÇÃO ----------');
+        console.log('Body recebido:', JSON.stringify(req.body, null, 2));
         const { customer, channel, items, total, status, observations, channelData } = req.body;
+
+        // Validação básica
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            console.error('Erro: Items array inválido');
+            return res.status(400).json({ error: "Lista de itens inválida" });
+        }
+
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        // 1. Criar ou buscar cliente
+        // 1. Verificar estoque para todos os itens
+        console.log('Iniciando verificação de estoque...');
+        const stockErrors = [];
+        const productsToUpdate = [];
+
+        for (const [index, item] of items.entries()) {
+            console.log(`Processando item ${index + 1}:`, item);
+
+            if (!item.product || !item.quantity) {
+                throw new Error(`Item ${index + 1} está incompleto`);
+            }
+
+            const [product] = await connection.query(
+                `SELECT id, name, current_stock 
+                 FROM products 
+                 WHERE id = ? 
+                 LIMIT 1`,
+                [parseInt(item.product)]
+            );
+
+            console.log(`Resultado da consulta do produto ${item.product}:`, product[0]);
+
+            if (!product.length) {
+                throw new Error(`Produto ID ${item.product} não encontrado`);
+            }
+
+            if (product[0].current_stock < item.quantity) {
+                console.warn(`Estoque insuficiente para ${product[0].name}`);
+                stockErrors.push({
+                    product: product[0].name,
+                    available: product[0].current_stock,
+                    requested: item.quantity
+                });
+            } else {
+                console.log(`Estoque suficiente para ${product[0].name}`);
+                productsToUpdate.push({
+                    id: product[0].id,
+                    quantity: item.quantity
+                });
+            }
+        }
+
+        if (stockErrors.length > 0) {
+            console.error('Erros de estoque:', stockErrors);
+            await connection.rollback();
+            return res.status(400).json({
+                error: "Estoque insuficiente",
+                details: stockErrors
+            });
+        }
+
+        // 2. Criar order_number
+        const [counter] = await connection.query(
+            `SELECT MAX(CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)) AS last_seq 
+             FROM orders 
+             WHERE order_number LIKE ?`,
+            [`${new Date().getFullYear()}%`]
+        );
+        const sequence = (counter[0].last_seq || 0) + 1;
+        const orderNumber = `${new Date().getFullYear()}-${sequence.toString().padStart(4, '0')}`;
+
+        // 3. Criar ou buscar cliente
         const [customerResult] = await connection.query(
             `INSERT INTO customers (name) VALUES (?) 
              ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)`,
             [customer]
         );
 
-        // 2. Criar a ordem com todos os campos necessários
+        // 4. Inserir a ordem principal
         const [orderResult] = await connection.query(
             `INSERT INTO orders (
+                order_number,
                 customer_id, 
                 total_amount, 
                 status, 
@@ -1675,12 +1753,13 @@ app.post('/api/sales', async (req, res) => {
                 whatsapp_number,
                 ifood_order,
                 attendant
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
+                orderNumber,
                 customerResult.insertId,
                 total,
                 status,
-                observations || null, // Corrigido campo notes
+                observations || null,
                 channel,
                 channelData?.whatsapp || null,
                 channelData?.ifood || null,
@@ -1688,80 +1767,95 @@ app.post('/api/sales', async (req, res) => {
             ]
         );
 
-        // 3. Inserir itens com validação de produto
+        // 5. Inserir itens do pedido
         for (const item of items) {
-            const [product] = await connection.query(
-                `SELECT id FROM products 
-                 WHERE name = ? LIMIT 1`,
+            const [prod] = await connection.query(
+                'SELECT id FROM products WHERE id = ?',
                 [item.product]
             );
 
-            if (product.length > 0) {
-                await connection.query(
-                    `INSERT INTO order_items 
-                     (order_id, product_id, quantity, unit_price)
-                     VALUES (?, ?, ?, ?)`,
-                    [orderResult.insertId, product[0].id, item.quantity, item.valor]
-                );
-            }
+            await connection.query(
+                `INSERT INTO order_items 
+         (order_id, product_id, quantity, unit_price)
+         VALUES (?, ?, ?, ?)`,
+                [
+                    orderResult.insertId,
+                    prod[0].id,
+                    item.quantity,
+                    item.valor
+                ]
+            );
+        }
+
+        // 6. Atualizar estoques
+        for (const product of productsToUpdate) {
+            await connection.query(
+                `UPDATE products 
+                 SET current_stock = current_stock - ? 
+                 WHERE id = ?`,
+                [product.quantity, product.id]
+            );
         }
 
         await connection.commit();
-        res.json({
-            success: true,
-            id: orderResult.insertId,
-            message: 'Venda registrada com sucesso!'
-        });
+        res.json({ success: true, message: 'Venda registrada com sucesso!' });
 
     } catch (error) {
-        if (connection) {
-            await connection.rollback();
-            console.error('Rollback executado devido a erro:', error);
-        }
+        console.error('Erro durante o processamento:', error.message);
+        console.error(error.stack);
+        if (connection) await connection.rollback();
         res.status(500).json({
-            error: 'Erro ao processar venda',
-            details: error.message
+            error: error.message || "Erro interno no servidor",
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     } finally {
-        if (connection) connection.release();
+        if (connection) {
+            console.log('Liberando conexão...');
+            connection.release();
+        }
     }
 });
 
-// CRUD READ Rota para buscar uma venda específica -- É NECESSARIO AINDA???
+// CRUD READ Rota para buscar uma venda específica
 app.get('/api/sales/:id', async (req, res) => {
     try {
         const connection = await pool.getConnection();
 
         const [order] = await connection.query(`
-            SELECT o.*, c.name as customer_name
+            SELECT 
+                o.*, 
+                c.name as customer_name,
+                o.customer_id
             FROM orders o
             LEFT JOIN customers c ON o.customer_id = c.id
             WHERE o.id = ?
         `, [req.params.id]);
 
-        if (order.length === 0) {
+        if (!order.length) {
             connection.release();
             return res.status(404).json({ error: 'Venda não encontrada' });
         }
 
         const [items] = await connection.query(`
-            SELECT p.name as product, oi.quantity, oi.unit_price as valor
-            FROM order_items oi
-            JOIN products p ON oi.product_id = p.id
-            WHERE oi.order_id = ?
+            SELECT 
+                product_id as product,  -- Garantir o alias correto
+                quantity,
+                unit_price as valor
+            FROM order_items
+            WHERE order_id = ?
         `, [req.params.id]);
 
         connection.release();
 
         res.json({
             ...order[0],
-            itens: items,
-            valorTotal: order[0].total_amount,
-            data: order[0].order_date.toISOString()
+            items: items, // Estrutura simplificada
+            customer: order[0].customer_id // ID do cliente para o formulário
         });
+
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Database error' });
+        res.status(500).json({ error: 'Erro no banco de dados' });
     }
 });
 
@@ -1819,8 +1913,7 @@ app.delete('/api/sales/:id', async (req, res) => {
     }
 });
 
-
-// END VENDAS .HTML ----------------------------------------------------------------------------------------------------------------------------------------
+// END VENDAS .HTML ------------------------------------------------------------------------------------------
 
 
 
