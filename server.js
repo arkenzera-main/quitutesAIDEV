@@ -691,7 +691,7 @@ app.get('/api/recipes/categories', async (req, res) => {
         const connection = await pool.getConnection();
         const [categories] = await connection.query('SELECT DISTINCT category FROM recipes ORDER BY category');
         connection.release();
-        
+
         const categoryList = categories.map(c => c.category);
         res.json(categoryList);
     } catch (error) {
@@ -1044,6 +1044,37 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 // Add these endpoints after your existing routes:
 
+// Rota para filtro de próximas tarefas
+app.get('/api/tasks/upcoming', async (req, res) => {
+    try {
+        const { start, end } = req.query;
+        const connection = await pool.getConnection();
+        const query = `
+            SELECT t.*, tc.name AS category_name, tc.color AS category_color 
+            FROM tasks t
+            LEFT JOIN task_categories tc ON t.category_id = tc.id
+            WHERE t.due_date BETWEEN ? AND ?
+            AND t.status != 'completed'
+            ORDER BY t.due_date ASC
+        `;
+        const [tasks] = await connection.query(query, [start, end]);
+        connection.release();
+        res.json({ tasks });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+
+
+
+
+
+
+
+
+
 // Rotas para tarefas.html
 app.get('/api/tasks', async (req, res) => {
     console.log('Query parameters:', req.query);
@@ -1052,8 +1083,19 @@ app.get('/api/tasks', async (req, res) => {
         const offset = (page - 1) * limit;
         const connection = await pool.getConnection();
 
+        // Modificar a query para converter timezone
         let query = `
-            SELECT t.*, tc.name AS category_name, tc.color AS category_color 
+            SELECT 
+                t.id,
+                t.title,
+                t.description,
+                CONVERT_TZ(t.due_date, '+00:00', '-03:00') AS due_date,
+                t.priority,
+                t.status,
+                t.category_id,
+                t.reminder_minutes,
+                tc.name AS category_name,
+                tc.color AS category_color
             FROM tasks t
             LEFT JOIN task_categories tc ON t.category_id = tc.id
             WHERE 1=1
@@ -1665,8 +1707,8 @@ app.post('/api/sales', async (req, res) => {
         }
 
         await connection.commit();
-        res.json({ 
-            success: true, 
+        res.json({
+            success: true,
             id: orderResult.insertId,
             message: 'Venda registrada com sucesso!'
         });
@@ -1676,7 +1718,7 @@ app.post('/api/sales', async (req, res) => {
             await connection.rollback();
             console.error('Rollback executado devido a erro:', error);
         }
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Erro ao processar venda',
             details: error.message
         });
@@ -1740,14 +1782,14 @@ app.put('/api/sales/:id', async (req, res) => {
             [status, observations, id]
         );
 
-        res.json({ 
+        res.json({
             success: true,
             message: 'Venda atualizada com sucesso!'
         });
 
     } catch (error) {
         console.error(error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Erro ao atualizar venda',
             details: error.message
         });
