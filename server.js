@@ -45,6 +45,32 @@ app.get('/', (req, res) => {
 // Create database connection pool
 const pool = mysql.createPool(dbConfig);
 
+
+// Database initialization
+async function initializeDatabase() {
+    try {
+        const connection = await mysql.createConnection({
+            host: dbConfig.host,
+            user: dbConfig.user,
+            password: dbConfig.password
+        });
+
+        await connection.query(`USE ${dbConfig.database}`);
+
+
+
+
+        await connection.end();
+        console.log('Database initialized successfully');
+    } catch (error) {
+        console.error('Error initializing database:', error);
+    }
+}
+
+
+
+
+
 // DASHBOARD.HTML --------------------------------------------------------------------
 // API endpoints
 app.get('/api/dashboard/summary', async (req, res) => {
@@ -88,47 +114,6 @@ app.get('/api/dashboard/summary', async (req, res) => {
             lowStockProducts: parseInt(lowStock[0].count) || 0,
             newCustomers: parseInt(newCustomers[0].count) || 0
         });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Database error' });
-    }
-});
-
-app.get('/api/dashboard/sales-data/:period', async (req, res) => {
-    try {
-        const { period } = req.params;
-        const connection = await pool.getConnection();
-
-        let query;
-
-        if (period === 'week') {
-            query = `
-                SELECT DAYNAME(order_date) as day, IFNULL(SUM(total_amount), 0) as total
-                FROM orders
-                WHERE YEARWEEK(order_date, 1) = YEARWEEK(CURDATE(), 1)
-                GROUP BY DAYOFWEEK(order_date), DAYNAME(order_date)
-                ORDER BY DAYOFWEEK(order_date)`;
-        } else if (period === 'month') {
-            query = `
-                SELECT DAY(order_date) as day, IFNULL(SUM(total_amount), 0) as total
-                FROM orders
-                WHERE MONTH(order_date) = MONTH(CURDATE())
-                AND YEAR(order_date) = YEAR(CURDATE())
-                GROUP BY DAY(order_date)
-                ORDER BY DAY(order_date)`;
-        } else { // year
-            query = `
-                SELECT MONTHNAME(order_date) as month, IFNULL(SUM(total_amount), 0) as total
-                FROM orders
-                WHERE YEAR(order_date) = YEAR(CURDATE())
-                GROUP BY MONTH(order_date), MONTHNAME(order_date)
-                ORDER BY MONTH(order_date)`;
-        }
-
-        const [results] = await connection.query(query);
-        connection.release();
-
-        res.json(results);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Database error' });
@@ -199,6 +184,13 @@ app.get('/api/dashboard/recent-orders', async (req, res) => {
     }
 });
 
+
+
+
+
+
+
+
 app.get('/api/dashboard/low-stock', async (req, res) => {
     try {
         const connection = await pool.getConnection();
@@ -218,130 +210,48 @@ app.get('/api/dashboard/low-stock', async (req, res) => {
     }
 });
 
-// Database initialization
-async function initializeDatabase() {
+
+app.get('/api/dashboard/sales-data/:period', async (req, res) => {
     try {
-        const connection = await mysql.createConnection({
-            host: dbConfig.host,
-            user: dbConfig.user,
-            password: dbConfig.password
-        });
+        const { period } = req.params;
+        const connection = await pool.getConnection();
 
-        // Create database if not exists
-        await connection.query(`CREATE DATABASE IF NOT EXISTS ${dbConfig.database}`);
-        await connection.query(`USE ${dbConfig.database}`);
+        let query;
 
-        // Create tables
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS products (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                category VARCHAR(50) NOT NULL,
-                description TEXT,
-                current_stock INT NOT NULL DEFAULT 0,
-                minimum_stock INT NOT NULL DEFAULT 5,
-                unit VARCHAR(20) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            )`);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS customers (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                name VARCHAR(100) NOT NULL,
-                email VARCHAR(100),
-                phone VARCHAR(20),
-                address TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-            )`);
-
-        await connection.query(`
-        CREATE TABLE IF NOT EXISTS orders (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            order_number VARCHAR(20) NOT NULL,
-            customer_id INT NOT NULL,
-            total_amount DECIMAL(10,2) NOT NULL,
-            status ENUM('pending', 'paid', 'preparing', 'on_delivery', 'delivered') DEFAULT 'pending',
-            order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            notes TEXT DEFAULT NULL,
-            channel ENUM('whatsapp', 'ifood', 'balcao') NOT NULL,
-            whatsapp_number VARCHAR(20) DEFAULT NULL,
-            ifood_order VARCHAR(20) DEFAULT NULL,
-            attendant VARCHAR(50) DEFAULT NULL,
-            
-            FOREIGN KEY (customer_id) REFERENCES customers(id)
-    )`);
-
-        await connection.query(`
-            CREATE TABLE IF NOT EXISTS order_items (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                order_id INT NOT NULL,
-                product_id INT NOT NULL,
-                quantity INT NOT NULL,
-                unit_price DECIMAL(10,2) NOT NULL,
-                FOREIGN KEY (order_id) REFERENCES orders(id),
-                FOREIGN KEY (product_id) REFERENCES products(id)
-            )`);
-
-        // Insert sample data if tables are empty
-        const [productsCount] = await connection.query('SELECT COUNT(*) as count FROM products');
-        if (productsCount[0].count === 0) {
-            await connection.query(`
-                INSERT INTO products (name, category, current_stock, minimum_stock, unit) VALUES
-                ('Bolo de Chocolate', 'Bolos', 5, 15, 'unidade'),
-                ('Pão de Mel', 'Doces', 3, 10, 'unidade'),
-                ('Pudim', 'Sobremesas', 2, 8, 'porção'),
-                ('Brigadeiro', 'Doces', 20, 30, 'unidade'),
-                ('Beijinho', 'Doces', 18, 25, 'unidade'),
-                ('Torta de Limão', 'Tortas', 6, 10, 'fatia'),
-                ('Cookie', 'Biscoitos', 12, 20, 'unidade')`);
+        if (period === 'week') {
+            query = `
+                SELECT DAYNAME(order_date) as day, IFNULL(SUM(total_amount), 0) as total
+                FROM orders
+                WHERE YEARWEEK(order_date, 1) = YEARWEEK(CURDATE(), 1)
+                GROUP BY DAYOFWEEK(order_date), DAYNAME(order_date)
+                ORDER BY DAYOFWEEK(order_date)`;
+        } else if (period === 'month') {
+            query = `
+                SELECT DAY(order_date) as day, IFNULL(SUM(total_amount), 0) as total
+                FROM orders
+                WHERE MONTH(order_date) = MONTH(CURDATE())
+                AND YEAR(order_date) = YEAR(CURDATE())
+                GROUP BY DAY(order_date)
+                ORDER BY DAY(order_date)`;
+        } else { // year
+            query = `
+                SELECT MONTHNAME(order_date) as month, IFNULL(SUM(total_amount), 0) as total
+                FROM orders
+                WHERE YEAR(order_date) = YEAR(CURDATE())
+                GROUP BY MONTH(order_date), MONTHNAME(order_date)
+                ORDER BY MONTH(order_date)`;
         }
 
-        const [customersCount] = await connection.query('SELECT COUNT(*) as count FROM customers');
-        if (customersCount[0].count === 0) {
-            await connection.query(`
-                INSERT INTO customers (name, email, phone) VALUES
-                ('Ana Silva', 'ana@email.com', '(11) 99999-9999'),
-                ('Carlos Oliveira', 'carlos@email.com', '(11) 98888-8888'),
-                ('Mariana Costa', 'mariana@email.com', '(11) 97777-7777'),
-                ('Roberto Santos', 'roberto@email.com', '(11) 96666-6666')`);
-        }
+        const [results] = await connection.query(query);
+        connection.release();
 
-        const [ordersCount] = await connection.query('SELECT COUNT(*) as count FROM orders');
-        if (ordersCount[0].count === 0) {
-            // Insert orders
-            await connection.query(`
-                INSERT INTO orders (order_number, customer_id, total_amount, status, order_date) VALUES
-                ('QT-1024', 1, 87.50, 'delivered', '2023-06-10 14:30:00'),
-                ('QT-1023', 2, 145.00, 'preparing', '2023-06-10 15:15:00'),
-                ('QT-1022', 3, 52.00, 'on_delivery', '2023-06-09 10:45:00'),
-                ('QT-1021', 4, 32.50, 'paid', '2023-06-09 16:20:00'),
-                ('QT-1020', 1, 75.00, 'delivered', '2023-06-08 13:10:00'),
-                ('QT-1019', 2, 120.00, 'delivered', '2023-06-07 17:30:00')`);
-
-            // Insert order items
-            await connection.query(`
-                INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES
-                (1, 1, 1, 45.00),
-                (1, 4, 2, 21.25),
-                (2, 1, 2, 45.00),
-                (2, 3, 1, 25.00),
-                (2, 5, 2, 15.00),
-                (3, 6, 2, 26.00),
-                (4, 7, 1, 32.50),
-                (5, 2, 3, 25.00),
-                (6, 1, 1, 45.00),
-                (6, 3, 1, 25.00),
-                (6, 7, 2, 25.00)`);
-        }
-
-        await connection.end();
-        console.log('Database initialized successfully');
+        res.json(results);
     } catch (error) {
-        console.error('Error initializing database:', error);
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
     }
-}
+});
+
 // FIM ROTAS DASHBOARD.HTML
 
 
@@ -403,14 +313,34 @@ CREATE TABLE `products` (
 
 
 
+// ROTA QUE FAZ PARTA DA TELA RECEITAS.HTML POREM PRECISA VIR ANTES DE /api/products/:id
+// Get all products for ingredient selection
+app.get('/api/products/select', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [products] = await connection.query(
+            'SELECT id, name, category, unit FROM products ORDER BY name'
+        );
+        connection.release();
 
+        if (products.length === 0) {
+            return res.status(200).json([]); // Array vazio
+        }
 
+        res.json(products);
 
-
-
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            error: 'Erro ao carregar produtos'
+        });
+    }
+});
 
 // [1] Rota GET para listar produtos com paginação e filtros (refatorada)
-app.get('/api/products', async (req, res) => {
+// Rota para estoque.html com paginação e filtros
+app.get('/api/products/paginated', async (req, res) => {
     try {
         const { page = 1, limit = 10, category, stock, search } = req.query;
         const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -477,56 +407,21 @@ app.get('/api/products', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Erro GET /api/products:', error);
+        console.error('Erro GET /api/products/paginated:', error);
         res.status(500).json({ success: false, error: 'Erro no servidor' });
     }
 });
 
-// ROTA QUE FAZ PARTA DA TELA RECEITAS.HTML POREM PRECISA VIR ANTES DE /api/products/:id
-// Get all products for ingredient selection
-app.get('/api/products/select', async (req, res) => {
-    try {
-        const connection = await pool.getConnection();
-        const [products] = await connection.query(
-            'SELECT id, name, category, unit FROM products ORDER BY name'
-        );
-        connection.release();
-
-        if (products.length === 0) {
-            return res.status(200).json([]); // Array vazio
-        }
-
-        res.json(products);
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({
-            success: false,
-            error: 'Erro ao carregar produtos'
-        });
-    }
-});
 
 
 
-// [2] Rota GET para buscar um produto específico
-app.get('/api/products/:id', async (req, res) => {
-    try {
-        const [rows] = await pool.query(
-            'SELECT * FROM products WHERE id = ?',
-            [req.params.id]
-        );
 
-        if (rows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
-        }
 
-        res.json({ success: true, product: rows[0] });
-    } catch (error) {
-        console.error('Erro GET /api/products/:id:', error);
-        res.status(500).json({ success: false, error: 'Erro no servidor' });
-    }
-});
+
+
+
+
+
 
 
 // [3] Rota POST para criar novo produto
@@ -561,75 +456,10 @@ app.post('/api/products', async (req, res) => {
     }
 });
 
-// [4] Rota PUT para atualizar produto
-app.put('/api/products/:id', async (req, res) => {
-    try {
-        const productId = req.params.id;
-        const { name, category, current_stock, minimum_stock, unit, description } = req.body;
-
-        // Verifica se o produto existe
-        const [check] = await pool.query(
-            'SELECT id FROM products WHERE id = ?',
-            [productId]
-        );
-
-        if (check.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Produto não encontrado'
-            });
-        }
-
-        // Atualização
-        await pool.query(
-            `UPDATE products SET
-                name = ?,
-                category = ?,
-                current_stock = ?,
-                minimum_stock = ?,
-                unit = ?,
-                description = ?
-            WHERE id = ?`,
-            [name, category, current_stock, minimum_stock, unit, description, productId]
-        );
-
-        res.json({
-            success: true,
-            message: 'Produto atualizado com sucesso'
-        });
-
-    } catch (error) {
-        console.error('Erro PUT /api/products/:id:', error);
-        res.status(500).json({ success: false, error: 'Erro ao atualizar produto' });
-    }
-});
 
 
-// [5] Rota DELETE para remover produto
-app.delete('/api/products/:id', async (req, res) => {
-    try {
-        const [result] = await pool.query(
-            'DELETE FROM products WHERE id = ?',
-            [req.params.id]
-        );
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Produto não encontrado'
-            });
-        }
 
-        res.json({
-            success: true,
-            message: 'Produto excluído com sucesso'
-        });
-
-    } catch (error) {
-        console.error('Erro DELETE /api/products/:id:', error);
-        res.status(500).json({ success: false, error: 'Erro ao excluir produto' });
-    }
-});
 
 
 
@@ -917,6 +747,26 @@ app.put('/api/recipes/:id', async (req, res) => {
     }
 });
 
+// Log recipe actions (prepared, viewed, etc.)
+app.post('/api/recipes/:id/log', async (req, res) => {
+    try {
+        const recipeId = req.params.id;
+        const { action } = req.body;
+        const connection = await pool.getConnection();
+
+        await connection.query(
+            'INSERT INTO recipe_log (recipe_id, action) VALUES (?, ?)',
+            [recipeId, action]
+        );
+
+        connection.release();
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 // Delete recipe
 app.delete('/api/recipes/:id', async (req, res) => {
     try {
@@ -949,25 +799,7 @@ app.delete('/api/recipes/:id', async (req, res) => {
 
 
 
-// Log recipe actions (prepared, viewed, etc.)
-app.post('/api/recipes/:id/log', async (req, res) => {
-    try {
-        const recipeId = req.params.id;
-        const { action } = req.body;
-        const connection = await pool.getConnection();
 
-        await connection.query(
-            'INSERT INTO recipe_log (recipe_id, action) VALUES (?, ?)',
-            [recipeId, action]
-        );
-
-        connection.release();
-        res.json({ success: true });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Database error' });
-    }
-});
 
 
 
@@ -1594,16 +1426,106 @@ app.get('/api/sales', async (req, res) => {
 
 
 
-// [4] Rota GET para listar todos os produtos
+// Rota GET para listar todos os produtos (CORRIGIDA)
+// Rota simplificada para vendas.html
 app.get('/api/products', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM products');
-        res.json(rows); // << isso aqui precisa retornar um array direto
+        res.json(rows);
     } catch (error) {
         console.error('Erro GET /api/products:', error);
-        res.status(500).json({ error: 'Erro ao buscar produtos' });
+        res.status(500).json([]);
     }
 });
+
+// [2] Rota GET para buscar um produto específico
+app.get('/api/products/:id', async (req, res) => {
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM products WHERE id = ?',
+            [req.params.id]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Produto não encontrado' });
+        }
+
+        res.json({ success: true, product: rows[0] });
+    } catch (error) {
+        console.error('Erro GET /api/products/:id:', error);
+        res.status(500).json({ success: false, error: 'Erro no servidor' });
+    }
+});
+
+// [4] Rota PUT para atualizar produto
+app.put('/api/products/:id', async (req, res) => {
+    try {
+        const productId = req.params.id;
+        const { name, category, current_stock, minimum_stock, unit, description } = req.body;
+
+        // Verifica se o produto existe
+        const [check] = await pool.query(
+            'SELECT id FROM products WHERE id = ?',
+            [productId]
+        );
+
+        if (check.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Produto não encontrado'
+            });
+        }
+
+        // Atualização
+        await pool.query(
+            `UPDATE products SET
+                name = ?,
+                category = ?,
+                current_stock = ?,
+                minimum_stock = ?,
+                unit = ?,
+                description = ?
+            WHERE id = ?`,
+            [name, category, current_stock, minimum_stock, unit, description, productId]
+        );
+
+        res.json({
+            success: true,
+            message: 'Produto atualizado com sucesso'
+        });
+
+    } catch (error) {
+        console.error('Erro PUT /api/products/:id:', error);
+        res.status(500).json({ success: false, error: 'Erro ao atualizar produto' });
+    }
+});
+
+// [5] Rota DELETE para remover produto
+app.delete('/api/products/:id', async (req, res) => {
+    try {
+        const [result] = await pool.query(
+            'DELETE FROM products WHERE id = ?',
+            [req.params.id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Produto não encontrado'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Produto excluído com sucesso'
+        });
+
+    } catch (error) {
+        console.error('Erro DELETE /api/products/:id:', error);
+        res.status(500).json({ success: false, error: 'Erro ao excluir produto' });
+    }
+});
+
 
 // CRUD READ - Detalhes da venda
 app.get('/api/sales/summary', async (req, res) => {
@@ -1748,7 +1670,7 @@ app.post('/api/sales', async (req, res) => {
                 customer_id, 
                 total_amount, 
                 status, 
-                notes,
+                observations,
                 channel,
                 whatsapp_number,
                 ifood_order,
@@ -1860,35 +1782,100 @@ app.get('/api/sales/:id', async (req, res) => {
 });
 
 
-// CRUD UPDATE 
 app.put('/api/sales/:id', async (req, res) => {
     let connection;
     try {
         const { id } = req.params;
-        const { status, observations } = req.body;
-        connection = await pool.getConnection();
+        
+        // Log completo do body recebido para diagnóstico
+        console.log('[DEBUG] Body recebido:', req.body);
+        
+        // Extrair campos com destructoring + valores padrão
+        const { 
+            status = null, 
+            observations = null,
+            // Adicione outros campos necessários aqui
+            customer = null,
+            total_amount = null,
+            order_date = null
+        } = req.body;
 
-        await connection.query(
+        // Validação reforçada
+        const errors = [];
+        if (!status) errors.push('status é obrigatório');
+        if (!observations) errors.push('observations é obrigatório');
+        
+        if (errors.length > 0) {
+            return res.status(400).json({ 
+                error: 'Campos obrigatórios faltando',
+                missing_fields: errors 
+            });
+        }
+
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        // Query de update mais completa (ajuste conforme sua estrutura real)
+        const [result] = await connection.query(
             `UPDATE orders SET
                 status = ?,
-                notes = ?
+                observations = ?,
+                customer = ?,
+                total_amount = ?,
+                order_date = ?
              WHERE id = ?`,
-            [status, observations, id]
+            [status, observations, customer, total_amount, order_date, id]
         );
 
+        // Verificação de venda existente
+        if (result.affectedRows === 0) {
+            await connection.rollback();
+            return res.status(404).json({ 
+                error: 'Venda não encontrada ou nenhum dado modificado',
+                debug_id: id
+            });
+        }
+
+        // Commit explícito
+        await connection.commit();
+
+        // Resposta detalhada
         res.json({
             success: true,
-            message: 'Venda atualizada com sucesso!'
+            message: 'Venda atualizada com sucesso!',
+            updated_fields: {
+                status,
+                observations,
+                customer,
+                total_amount,
+                order_date
+            }
         });
 
     } catch (error) {
-        console.error(error);
+        // Rollback seguro
+        if (connection && connection.rollback) {
+            console.log('[ROLLBACK] Executando rollback...');
+            await connection.rollback();
+        }
+        
+        // Log detalhado do erro
+        console.error('[ERROR] Erro na rota PUT /api/sales:', {
+            message: error.message,
+            stack: error.stack,
+            params: req.params,
+            body: req.body
+        });
+
         res.status(500).json({
-            error: 'Erro ao atualizar venda',
-            details: error.message
+            error: 'Erro interno no servidor',
+            debug: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     } finally {
-        if (connection) connection.release();
+        // Liberação segura da conexão
+        if (connection && connection.release) {
+            connection.release();
+        }
     }
 });
 
@@ -1925,6 +1912,55 @@ app.delete('/api/sales/:id', async (req, res) => {
 
 // CRUD CREATE 
 // Relatórios - Rotas
+
+app.get('/api/reports/recent', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [reports] = await connection.query(
+            `SELECT id, name, type, format, created_at as date 
+             FROM reports 
+             ORDER BY created_at DESC 
+             LIMIT 10`
+        );
+        connection.release();
+
+        // Garantir que sempre retornamos um array
+        res.json(reports || []);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao buscar relatórios' });
+    }
+});
+
+app.get('/api/reports/download/:id', async (req, res) => {
+    try {
+        const connection = await pool.getConnection();
+        const [reports] = await connection.query(
+            'SELECT * FROM reports WHERE id = ?',
+            [req.params.id]
+        );
+        connection.release();
+
+        if (reports.length === 0) {
+            return res.status(404).json({ error: 'Relatório não encontrado' });
+        }
+
+        const report = reports[0];
+        const filePath = path.join(__dirname, 'reports', report.file_path);
+
+        res.download(filePath, report.file_path, (err) => {
+            if (err) {
+                console.error('Erro no download:', err);
+                res.status(500).json({ error: 'Erro ao baixar arquivo' });
+            }
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao baixar relatório' });
+    }
+});
+
 
 app.post('/api/reports/preview', async (req, res) => {
     try {
@@ -2050,53 +2086,9 @@ app.post('/api/reports/export', async (req, res) => {
     }
 });
 
-app.get('/api/reports/recent', async (req, res) => {
-    try {
-        const connection = await pool.getConnection();
-        const [reports] = await connection.query(
-            `SELECT id, name, type, format, created_at as date 
-             FROM reports 
-             ORDER BY created_at DESC 
-             LIMIT 10`
-        );
-        connection.release();
 
-        // Garantir que sempre retornamos um array
-        res.json(reports || []);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao buscar relatórios' });
-    }
-});
 
-app.get('/api/reports/download/:id', async (req, res) => {
-    try {
-        const connection = await pool.getConnection();
-        const [reports] = await connection.query(
-            'SELECT * FROM reports WHERE id = ?',
-            [req.params.id]
-        );
-        connection.release();
 
-        if (reports.length === 0) {
-            return res.status(404).json({ error: 'Relatório não encontrado' });
-        }
-
-        const report = reports[0];
-        const filePath = path.join(__dirname, 'reports', report.file_path);
-
-        res.download(filePath, report.file_path, (err) => {
-            if (err) {
-                console.error('Erro no download:', err);
-                res.status(500).json({ error: 'Erro ao baixar arquivo' });
-            }
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao baixar relatório' });
-    }
-});
 // END RELATORIOS.HTML ----------------------------------------------------------------------------------------------------------------------------------------
 
 

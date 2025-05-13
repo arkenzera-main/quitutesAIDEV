@@ -826,16 +826,25 @@
                     const select = document.getElementById(`item-produto-${itemId}`);
                     select.innerHTML = '<option value="">Selecione...</option>';
 
-                    produtos.forEach(produto => {
-                        const option = document.createElement('option');
-                        option.value = produto.id;
-                        option.textContent = produto.name;
-                        // Selecionar o produto correto
-                        if (produto.id.toString() === item.produto.toString()) {
-                            option.selected = true;
-                        }
-                        select.appendChild(option);
-                    });
+                    // Verifique se a resposta é um array
+                    if (Array.isArray(produtos)) {
+                        produtos.forEach(produto => {
+                            const option = document.createElement('option');
+                            option.value = produto.id;
+                            option.textContent = produto.name;
+                            if (produto.id.toString() === item.produto.toString()) {
+                                option.selected = true;
+                            }
+                            select.appendChild(option);
+                        });
+                    } else {
+                        console.error('Resposta inválida da API:', produtos);
+                        mostrarMensagem('Erro ao carregar produtos', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar produtos:', error);
+                    mostrarMensagem(error.message, 'error');
                 });
 
             // Atualiza o total quando houver mudanças
@@ -884,7 +893,7 @@
                 document.getElementById('venda-data').value = new Date(venda.order_date).toISOString().slice(0, 16);
                 document.getElementById('venda-valor').value = venda.total_amount;
                 document.getElementById('venda-status').value = venda.status;
-                document.getElementById('venda-observacoes').value = venda.notes || '';
+                document.getElementById('venda-observacoes').value = venda.observations || '';
 
                 // Canal específico
                 document.getElementById('venda-canal').value = venda.channel;
@@ -939,14 +948,17 @@
         document.getElementById('form-venda').addEventListener('submit', async (e) => {
             e.preventDefault();
 
+
             const formData = {
-                customer: document.getElementById('venda-cliente').value,
-                channel: document.getElementById('venda-canal').value,
                 status: document.getElementById('venda-status').value,
                 observations: document.getElementById('venda-observacoes').value,
-                total: parseFloat(document.getElementById('venda-valor').value),
-                channelData: {},
-                items: []
+                // Campos adicionais
+                customer: document.getElementById('venda-cliente').value,
+                channel: document.getElementById('venda-canal').value,
+                total_amount: parseFloat(document.getElementById('venda-valor').value),
+                order_date: document.getElementById('venda-data').value,
+                items: [],
+                channelData: {} // ← INICIALIZE O OBJETO AQUI!
             };
 
             // Coletar dados do canal
@@ -960,16 +972,18 @@
             document.querySelectorAll('#venda-itens-container > div').forEach(item => {
                 const id = item.id.replace('item-', '');
                 formData.items.push({
-                    product: document.getElementById(`item-produto-${id}`).value,
+                    product_id: document.getElementById(`item-produto-${id}`).value,
                     quantity: parseFloat(document.getElementById(`item-quantidade-${id}`).value),
-                    valor: parseFloat(document.getElementById(`item-valor-${id}`).value)
+                    unit_price: parseFloat(document.getElementById(`item-valor-${id}`).value)
                 });
             });
 
+            console.log('Dados da venda:', formData);
+
             try {
                 const vendaId = document.getElementById('venda-id').value;
-                const url = vendaId ? `/api/sales/${vendaId}` : '/api/sales';
                 const method = vendaId ? 'PUT' : 'POST';
+                const url = vendaId ? `/api/sales/${vendaId}` : '/api/sales';
 
                 const response = await fetch(url, {
                     method: method,

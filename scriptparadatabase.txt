@@ -17,21 +17,22 @@ CREATE TABLE IF NOT EXISTS `customers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 -- Criar tabela de pedidos ////////// Essa tabela é também usada para vendas.html
-CREATE TABLE IF NOT EXISTS orders (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        order_number VARCHAR(20) NOT NULL,
-        customer_id INT NOT NULL,
-        total_amount DECIMAL(10,2) NOT NULL,
-        status ENUM('pending', 'paid', 'preparing', 'on_delivery', 'delivered') DEFAULT 'pending',
-        order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        notes TEXT DEFAULT NULL,
-        channel ENUM('whatsapp', 'ifood', 'balcao') NOT NULL,
-        whatsapp_number VARCHAR(20) DEFAULT NULL,
-        ifood_order VARCHAR(20) DEFAULT NULL,
-        attendant VARCHAR(50) DEFAULT NULL,
-        
-        FOREIGN KEY (customer_id) REFERENCES customers(id),
-    )`
+CREATE TABLE `orders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `order_number` varchar(20) NOT NULL,
+  `customer_id` int(11) NOT NULL,
+  `total_amount` decimal(10,2) NOT NULL,
+  `status` enum('pending','paid','preparing','on_delivery','delivered') DEFAULT 'pending',
+  `observations` text DEFAULT NULL,
+  `channel` enum('whatsapp','ifood','balcao') NOT NULL,
+  `order_date` timestamp NOT NULL DEFAULT current_timestamp(),
+  `whatsapp_number` varchar(20) DEFAULT NULL,
+  `ifood_order` varchar(20) DEFAULT NULL,
+  `attendant` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `customer_id` (`customer_id`),
+  CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 
 

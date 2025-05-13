@@ -634,7 +634,7 @@
                     search: currentSearchQuery
                 });
 
-                const response = await fetch(`/api/products?${queryParams}`);
+                const response = await fetch(`/api/products/paginated?${queryParams}`);
 
                 // Checar se a resposta está ok
                 if (!response.ok) {
