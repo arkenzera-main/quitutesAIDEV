@@ -120,13 +120,13 @@
                                 <span class="nav-text">Vendas</span>
                             </a>
                         </li>
-                        <li>
+                        <!-- <li>
                             <a href="relatorios.html"
                                 class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-chart-bar mr-3"></i>
                                 <span class="nav-text">Relatórios</span>
                             </a>
-                        </li>
+                        </li> -->
                         <li>
                             <a href="sustentabilidade.html"
                                 class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
@@ -239,11 +239,12 @@
                                 <select id="filter-category"
                                     class="appearance-none bg-white border rounded-lg px-3 py-2 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                                     <option value="">Todas categorias</option>
-                                    <option value="massaDoce">Massa Doce</option>
-                                    <option value="massaSalgada">Massa Salgada</option>
-                                    <option value="recheioDoce">Recheio Doce</option>
-                                    <option value="recheioSalgado">Recheio Salgado</option>
-                                    <option value="ingredientes">Ingredientes</option>
+                                    <option value="Bolo">Bolo</option>
+                                    <option value="Sobremesa">Sobremesa</option>
+                                    <option value="Doce">Doce</option>
+                                    <option value="Salgado Assado">Salgado Assado</option>
+                                    <option value="Salgado Frito">Salgado Frito</option>
+                                    <option value="Geladinho">Geladinho</option>
                                     <option value="outros">Outros</option>
                                 </select>
                                 <i
@@ -334,12 +335,13 @@
                             class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
                         <select id="product-category" required
                             class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="massa Doce">Massa Doce</option>
-                            <option value="massa Salgada">Massa Salgada</option>
-                            <option value="recheio Doce">Recheio Doce</option>
-                            <option value="recheio Salgado">Recheio Salgado</option>
-                            <option value="ingredientes">Ingredientes</option>
-                            <option value="outros">Outros</option>
+                            <option value="Bolo">Bolo</option>
+                                    <option value="Sobremesa">Sobremesa</option>
+                                    <option value="Doce">Doce</option>
+                                    <option value="Salgado Assado">Salgado Assado</option>
+                                    <option value="Salgado Frito">Salgado Frito</option>
+                                    <option value="Geladinho">Geladinho</option>
+                                    <option value="outros">Outros</option>
                         </select>
                         <!-- Categories will be populated by JavaScript -->
                     </div>
@@ -414,12 +416,13 @@
                             class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
                         <select id="edit-product-category" required
                             class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="massa Doce">Massa Doce</option>
-                            <option value="massa Salgada">Massa Salgada</option>
-                            <option value="recheio Doce">Recheio Doce</option>
-                            <option value="recheio Salgado">Recheio Salgado</option>
-                            <option value="ingredientes">Ingredientes</option>
-                            <option value="outros">Outros</option>
+                            <option value="Bolo">Bolo</option>
+                                    <option value="Sobremesa">Sobremesa</option>
+                                    <option value="Doce">Doce</option>
+                                    <option value="Salgado Assado">Salgado Assado</option>
+                                    <option value="Salgado Frito">Salgado Frito</option>
+                                    <option value="Geladinho">Geladinho</option>
+                                    <option value="outros">Outros</option>
                         </select>
                     </div>
                     <div class="grid grid-cols-2 gap-4 mb-4">
@@ -664,13 +667,13 @@
                 const categoryFilter = document.getElementById('filter-category');
 
                 // Adiciona as opções fixas (hardcoded)
-                categoryFilter.innerHTML = `<option value="">Todas categorias</option>
-                            <option value="massa Doce">Massa Doce</option>
-                            <option value="massa Salgada">Massa Salgada</option>
-                            <option value="recheio Doce">Recheio Doce</option>
-                            <option value="recheio Salgado">Recheio Salgado</option>
-                            <option value="ingredientes">Ingredientes</option>
-                            <option value="outros">Outros</option>`;
+                categoryFilter.innerHTML = `<option value="Bolo">Bolo</option>
+                                    <option value="Sobremesa">Sobremesa</option>
+                                    <option value="Doce">Doce</option>
+                                    <option value="Salgado Assado">Salgado Assado</option>
+                                    <option value="Salgado Frito">Salgado Frito</option>
+                                    <option value="Geladinho">Geladinho</option>
+                                    <option value="outros">Outros</option>`;
 
                 // Se houver um filtro de categoria selecionado, define o valor
                 if (currentCategoryFilter) {
