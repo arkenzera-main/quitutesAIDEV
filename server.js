@@ -1315,6 +1315,41 @@ app.put('/api/tasks/:id/reminder', async (req, res) => {
 // SERVER.JS - FINANCAS.HTML --------------------------------------------------------------------------------------------------------------------------------
 
 // Rotas para Transações Financeiras
+// server.js
+app.get('/api/finances/summary', async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+
+        const [result] = await pool.query(`
+            SELECT 
+                COALESCE(SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END), 0) as total_expenses,
+                COALESCE(SUM(
+                    CASE WHEN type = 'entrada' THEN amount 
+                    WHEN type = 'saida' THEN -amount 
+                    ELSE 0 END
+                ), 0) as balance
+            FROM financial_transactions
+            WHERE (? IS NULL OR transaction_date >= ?)
+            AND (? IS NULL OR transaction_date <= ?)
+        `, [start_date, start_date, end_date, end_date]);
+
+        res.json({
+            total_income: Number(result[0].total_income),
+            total_expenses: Number(result[0].total_expenses),
+            balance: Number(result[0].balance)
+        });
+
+    } catch (error) {
+        console.error('Erro em /api/finances/summary:', error);
+        res.status(500).json({
+            total_income: 0,
+            total_expenses: 0,
+            balance: 0
+        });
+    }
+});
+
 app.get('/api/transactions', async (req, res) => {
     try {
         const {
@@ -1376,7 +1411,7 @@ app.get('/api/transactions', async (req, res) => {
     }
 });
 
-app.get('/api/finances/summary', async (req, res) => {
+/*app.get('/api/finances/summary', async (req, res) => {
     try {
         const { start_date, end_date } = req.query;
 
@@ -1409,7 +1444,7 @@ app.get('/api/finances/summary', async (req, res) => {
         console.error('Erro em /api/finances/summary:', error);
         res.status(500).json({ error: 'Erro ao calcular resumo' });
     }
-});
+});*/
 
 app.post('/api/transactions', async (req, res) => {
     try {
@@ -1514,17 +1549,17 @@ app.get('/api/sales', async (req, res) => {
                     if (order.order_date instanceof Date && !isNaN(order.order_date.getTime())) {
                         const dt = order.order_date;
                         year = dt.getFullYear();
-                        month = dt.getMonth(); 
+                        month = dt.getMonth();
                         day = dt.getDate();
                         hours = dt.getHours();
                         minutes = dt.getMinutes();
                         seconds = dt.getSeconds();
-                    } else { 
+                    } else {
                         const dateStr = String(order.order_date);
                         const parts = dateStr.match(/^(\\d{4})-(\\d{2})-(\\d{2}) (\\d{2}):(\\d{2}):(\\d{2})/);
                         if (parts) {
                             year = parseInt(parts[1], 10);
-                            month = parseInt(parts[2], 10) - 1; 
+                            month = parseInt(parts[2], 10) - 1;
                             day = parseInt(parts[3], 10);
                             hours = parseInt(parts[4], 10);
                             minutes = parseInt(parts[5], 10);
@@ -1723,15 +1758,27 @@ app.post('/api/sales', async (req, res) => {
     try {
         console.log('---------- NOVA REQUISIÇÃO POST /api/sales ----------');
         console.log('Body recebido:', JSON.stringify(req.body, null, 2));
-        const { 
-            customer, 
-            channel, 
-            items, 
-            status, 
-            observations, 
+        const {
+            customer,
+            channel,
+            items,
+            status,
+            observations,
             order_date: orderDateString, // String do input datetime-local
-            channelData 
+            channelData
         } = req.body;
+
+        const transactionDate = order_date_utc.split(' ')[0];
+        await connection.query(
+            `INSERT INTO financial_transactions 
+    (description, amount, type, category, transaction_date)
+    VALUES (?, ?, 'entrada', 'venda', ?)`,
+            [
+                `Venda ${orderNumber} (${channel})`,
+                calculatedTotalAmount,
+                new Date().toISOString().split('T')[0] // Data atual
+            ]
+        );
 
         // Validação básica
         if (!items || !Array.isArray(items) || items.length === 0) {
@@ -1825,11 +1872,11 @@ app.post('/api/sales', async (req, res) => {
             `INSERT INTO orders (
                 order_number,
                 customer_id, 
-                total_amount, // Será recalculado e inserido depois
+                total_amount, 
                 status, 
                 observations,
                 channel,
-                order_date, // Usar a data UTC convertida
+                order_date,
                 whatsapp_number,
                 ifood_order,
                 attendant
@@ -1949,15 +1996,15 @@ app.put('/api/sales/:id', async (req, res) => {
             observations = '',
             customer: customerName = null,
             order_date: orderDateString, // String do input datetime-local
-            items: updatedItems = [] 
+            items: updatedItems = []
             // total_amount é omitido, será recalculado
         } = req.body;
 
         console.log(`[DEBUG] Status recebido do cliente para venda ID ${id}: ${status}`);
 
         const statusMap = {
-            'pending': 'pending', 
-            'paid': 'paid', 
+            'pending': 'pending',
+            'paid': 'paid',
             'preparing': 'preparing',
             'on_delivery': 'on_delivery',
             'delivered': 'delivered'
@@ -1966,7 +2013,7 @@ app.put('/api/sales/:id', async (req, res) => {
         console.log(`[DEBUG] Status a ser salvo no BD para venda ID ${id} (dbStatus): ${dbStatus}`);
 
         // Mover a declaração para cá
-        let customerIdToUpdate = null; 
+        let customerIdToUpdate = null;
 
         if (!status) {
             return res.status(400).json({ error: 'Status é obrigatório' });
@@ -1974,7 +2021,7 @@ app.put('/api/sales/:id', async (req, res) => {
 
         let order_date_utc_for_update = null;
         if (orderDateString) {
-            const orderDateObject = new Date(orderDateString); 
+            const orderDateObject = new Date(orderDateString);
             order_date_utc_for_update = orderDateObject.toISOString().slice(0, 19).replace('T', ' ');
         }
 
@@ -2020,10 +2067,9 @@ app.put('/api/sales/:id', async (req, res) => {
                 );
             }
         } else {
-             // Se não houver itens, o total é 0, ou você pode optar por não permitir vendas sem itens
+            // Se não houver itens, o total é 0, ou você pode optar por não permitir vendas sem itens
             console.warn(`[WARN] Venda ID ${id} está sendo atualizada sem itens. Total será 0.`);
         }
-
 
         // 3. Atualizar a tabela 'orders'
         let updateOrderQuery = 'UPDATE orders SET status = ?, observations = ?, total_amount = ?';
@@ -2037,7 +2083,7 @@ app.put('/api/sales/:id', async (req, res) => {
             updateOrderQuery += ', customer_id = ?';
             orderQueryParams.push(customerIdToUpdate);
         }
-        
+
         updateOrderQuery += ' WHERE id = ?';
         orderQueryParams.push(id);
 
@@ -2058,13 +2104,13 @@ app.put('/api/sales/:id', async (req, res) => {
         res.json({
             success: true,
             message: 'Venda atualizada com sucesso!',
-            updated_fields: { 
-                status: dbStatus, 
-                observations, 
-                total_amount: newTotalAmount, 
-                customerId: customerIdToUpdate, 
+            updated_fields: {
+                status: dbStatus,
+                observations,
+                total_amount: newTotalAmount,
+                customerId: customerIdToUpdate,
                 order_date: order_date_utc_for_update, // Usar a variável correta
-                items_count: updatedItems.length 
+                items_count: updatedItems.length
             }
         });
 
@@ -2093,6 +2139,12 @@ app.put('/api/sales/:id', async (req, res) => {
             connection.release();
         }
     }
+
+    const [order] = await connection.query(
+        'SELECT order_number, total_amount, order_date FROM orders WHERE id = ?',
+        [id]
+    );
+    const transactionDate = order[0].order_date.toISOString().split('T')[0];
 });
 
 // Rota para deletar uma venda
@@ -2103,6 +2155,8 @@ app.delete('/api/sales/:id', async (req, res) => {
 
         await connection.query('DELETE FROM order_items WHERE order_id = ?', [req.params.id]);
         await connection.query('DELETE FROM orders WHERE id = ?', [req.params.id]);
+        await connection.query(`DELETE FROM financial_transactions WHERE description LIKE ?`, [`Venda ${order[0].order_number}%`]
+        );
 
         await connection.commit();
         connection.release();
@@ -2114,6 +2168,11 @@ app.delete('/api/sales/:id', async (req, res) => {
         console.error(error);
         res.status(500).json({ error: 'Database error' });
     }
+
+    const [order] = await connection.query(
+        'SELECT order_number FROM orders WHERE id = ?',
+        [req.params.id]
+    );
 });
 
 // END VENDAS .HTML ------------------------------------------------------------------------------------------
@@ -2214,5 +2273,5 @@ initializeDatabase().then(() => {
 });
 
 // Para rodar o servidor:
-// 1. Instale as dependências: npm install 
+// 1. Instale as dependências: npm install
 // 2. Rodar o servidor: node server.js

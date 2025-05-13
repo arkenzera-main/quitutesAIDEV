@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,64 +12,89 @@
         .sidebar {
             transition: all 0.3s;
         }
+
         .sidebar.collapsed {
             width: 80px;
         }
+
         .sidebar.collapsed .nav-text {
             display: none;
         }
+
         .sidebar.collapsed .logo-text {
             display: none;
         }
+
         .sidebar.collapsed .nav-item {
             justify-content: center;
         }
+
         .main-content {
             transition: all 0.3s;
         }
-        .sidebar.collapsed + .main-content {
+
+        .sidebar.collapsed+.main-content {
             margin-left: 80px;
         }
+
         .popup {
             animation: fadeIn 0.3s ease-out;
         }
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translate(-50%, -45%); }
-            to { opacity: 1; transform: translate(-50%, -50%); }
+            from {
+                opacity: 0;
+                transform: translate(-50%, -45%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
         }
+
         .overlay {
             background-color: rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(4px);
         }
+
         .card-hover:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
+
         .positive-value {
             color: #10b981;
         }
+
         .negative-value {
             color: #ef4444;
         }
+
         .chart-container {
             position: relative;
             height: 300px;
             width: 100%;
         }
+
         .loading-spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
+            border: 3px solid rgba(255, 255, 255, .3);
             border-radius: 50%;
             border-top-color: #fff;
             animation: spin 1s ease-in-out infinite;
         }
+
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
+
 <body class="bg-gray-50">
     <div class="flex h-screen">
         <!-- Sidebar -->
@@ -86,25 +112,29 @@
                 <nav>
                     <ul class="space-y-2">
                         <li>
-                            <a href="dashboard.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="dashboard.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-tachometer-alt mr-3"></i>
                                 <span class="nav-text">Dashboard</span>
                             </a>
                         </li>
                         <li>
-                            <a href="estoque.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="estoque.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-box-open mr-3"></i>
                                 <span class="nav-text">Estoque</span>
                             </a>
                         </li>
                         <li>
-                            <a href="receitas.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="receitas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-utensils mr-3"></i>
                                 <span class="nav-text">Receitas</span>
                             </a>
                         </li>
                         <li>
-                            <a href="tarefas.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="tarefas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-tasks mr-3"></i>
                                 <span class="nav-text">Tarefas</span>
                             </a>
@@ -116,7 +146,8 @@
                             </a>
                         </li>
                         <li>
-                            <a href="vendas.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="vendas.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-shopping-cart mr-3"></i>
                                 <span class="nav-text">Vendas</span>
                             </a>
@@ -128,7 +159,8 @@
                             </a>
                         </li> -->
                         <li>
-                            <a href="sustentabilidade.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
+                            <a href="sustentabilidade.html"
+                                class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-leaf mr-3"></i>
                                 <span class="nav-text">Sustentabilidade</span>
                             </a>
@@ -138,7 +170,8 @@
             </div>
 
             <div class="p-4 border-t border-indigo-600">
-                <button id="toggle-sidebar" class="flex items-center justify-center w-full p-2 rounded-lg hover:bg-indigo-800 transition">
+                <button id="toggle-sidebar"
+                    class="flex items-center justify-center w-full p-2 rounded-lg hover:bg-indigo-800 transition">
                     <i class="fas fa-chevron-left"></i>
                     <span class="nav-text ml-3">Recolher</span>
                 </button>
@@ -151,19 +184,21 @@
             <header class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
                 <h1 class="text-2xl font-bold text-gray-800">
                     <i class="fas fa-money-bill-wave text-indigo-600 mr-2"></i>
-                    Finanças    
+                    Finanças
                 </h1>
             </header>
 
             <!-- Content -->
             <main class="p-6">
                 <!-- Error Message -->
-                <div id="mensagem-erro" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
+                <div id="mensagem-erro"
+                    class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded">
                     <p id="erro-texto"></p>
                 </div>
 
                 <!-- Success Message -->
-                <div id="mensagem-sucesso" class="hidden bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+                <div id="mensagem-sucesso"
+                    class="hidden bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
                     <p id="sucesso-texto"></p>
                 </div>
 
@@ -172,24 +207,30 @@
                     <h2 class="text-lg font-semibold text-gray-800 mb-4">Filtros</h2>
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
-                            <label for="data-inicio" class="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
-                            <input type="date" id="data-inicio" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <label for="data-inicio" class="block text-sm font-medium text-gray-700 mb-1">Data
+                                Início</label>
+                            <input type="date" id="data-inicio"
+                                class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
                         <div>
                             <label for="data-fim" class="block text-sm font-medium text-gray-700 mb-1">Data Fim</label>
-                            <input type="date" id="data-fim" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <input type="date" id="data-fim"
+                                class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
                         <div>
                             <label for="filtro-tipo" class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                            <select id="filtro-tipo" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <select id="filtro-tipo"
+                                class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                                 <option value="">Todos</option>
                                 <option value="entrada">Entrada</option>
                                 <option value="saida">Saída</option>
                             </select>
                         </div>
                         <div>
-                            <label for="filtro-categoria" class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-                            <select id="filtro-categoria" class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <label for="filtro-categoria"
+                                class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                            <select id="filtro-categoria"
+                                class="w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
                                 <option value="">Todas</option>
                                 <option value="venda">Venda</option>
                                 <option value="despesa">Despesa</option>
@@ -200,10 +241,12 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <button id="btn-filtrar" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg">
+                        <button id="btn-filtrar"
+                            class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg">
                             Filtrar
                         </button>
-                        <button id="btn-limpar" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
+                        <button id="btn-limpar"
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
                             Limpar Filtros
                         </button>
                     </div>
@@ -262,7 +305,8 @@
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-lg font-semibold text-gray-800">Fluxo Mensal</h2>
-                            <select id="chart-period" class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <select id="chart-period"
+                                class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
                                 <option value="3">Últimos 3 meses</option>
                                 <option value="6">Últimos 6 meses</option>
                                 <option value="12">Últimos 12 meses</option>
@@ -282,10 +326,12 @@
 
                 <!-- Add Buttons -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <button id="btn-nova-entrada" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                    <button id="btn-nova-entrada"
+                        class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
                         <i class="fas fa-plus mr-2"></i> Nova Entrada
                     </button>
-                    <button id="btn-nova-saida" class="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
+                    <button id="btn-nova-saida"
+                        class="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-4 rounded-lg flex items-center justify-center">
                         <i class="fas fa-minus mr-2"></i> Nova Saída
                     </button>
                 </div>
@@ -295,7 +341,8 @@
                     <div class="p-4 border-b flex justify-between items-center">
                         <h2 class="text-lg font-semibold text-gray-800">Transações</h2>
                         <div class="flex items-center space-x-2">
-                            <select id="tabela-ordem" class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <select id="tabela-ordem"
+                                class="text-sm border rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
                                 <option value="data-desc">Mais recentes</option>
                                 <option value="data-asc">Mais antigas</option>
                                 <option value="valor-desc">Maior valor</option>
@@ -303,17 +350,29 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Descrição</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Data</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Descrição</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Tipo</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Categoria</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Valor</th>
+                                    <th scope="col"
+                                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Ações</th>
                                 </tr>
                             </thead>
                             <tbody id="tabela-transacoes" class="bg-white divide-y divide-gray-200">
@@ -341,7 +400,8 @@
                 <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div
+                class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-medium text-gray-900" id="modal-title">Nova Transação</h3>
@@ -352,27 +412,39 @@
                     <form id="form-transacao">
                         <input type="hidden" id="transacao-id">
                         <div class="mb-4">
-                            <label for="transacao-descricao" class="block text-sm font-medium text-gray-700">Descrição *</label>
-                            <input type="text" id="transacao-descricao" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                            <label for="transacao-descricao" class="block text-sm font-medium text-gray-700">Descrição
+                                *</label>
+                            <input type="text" id="transacao-descricao"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                required>
                         </div>
                         <div class="mb-4">
                             <label for="transacao-valor" class="block text-sm font-medium text-gray-700">Valor *</label>
-                            <input type="number" id="transacao-valor" step="0.01" min="0" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                            <input type="number" id="transacao-valor" step="0.01" min="0"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                required>
                         </div>
                         <div class="mb-4">
                             <label for="transacao-data" class="block text-sm font-medium text-gray-700">Data *</label>
-                            <input type="date" id="transacao-data" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                            <input type="date" id="transacao-data"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                required>
                         </div>
                         <div class="mb-4">
                             <label for="transacao-tipo" class="block text-sm font-medium text-gray-700">Tipo *</label>
-                            <select id="transacao-tipo" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                            <select id="transacao-tipo"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                required>
                                 <option value="entrada">Entrada</option>
                                 <option value="saida">Saída</option>
                             </select>
                         </div>
                         <div class="mb-4">
-                            <label for="transacao-categoria" class="block text-sm font-medium text-gray-700">Categoria *</label>
-                            <select id="transacao-categoria" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
+                            <label for="transacao-categoria" class="block text-sm font-medium text-gray-700">Categoria
+                                *</label>
+                            <select id="transacao-categoria"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                required>
                                 <option value="venda">Venda</option>
                                 <option value="despesa">Despesa</option>
                                 <option value="investimento">Investimento</option>
@@ -381,10 +453,12 @@
                             </select>
                         </div>
                         <div class="flex justify-end space-x-3">
-                            <button type="button" id="cancel-modal" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
+                            <button type="button" id="cancel-modal"
+                                class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg">
                                 Cancelar
                             </button>
-                            <button type="submit" id="submit-transacao" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg">
+                            <button type="submit" id="submit-transacao"
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg">
                                 <span id="submit-text">Salvar</span>
                                 <span id="submit-loading" class="hidden">
                                     <span class="loading-spinner inline-block mr-2"></span>
@@ -403,11 +477,11 @@
         let monthlyFlowChart, categoryDistributionChart;
 
         // Toggle sidebar
-        document.getElementById('toggle-sidebar').addEventListener('click', function() {
+        document.getElementById('toggle-sidebar').addEventListener('click', function () {
             document.querySelector('.sidebar').classList.toggle('collapsed');
             document.querySelector('.main-content').classList.toggle('ml-64');
             document.querySelector('.main-content').classList.toggle('ml-20');
-            
+
             const icon = this.querySelector('i');
             if (document.querySelector('.sidebar').classList.contains('collapsed')) {
                 icon.classList.remove('fa-chevron-left');
@@ -419,15 +493,15 @@
         });
 
         // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Set default dates
             const today = new Date();
             const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            
+
             document.getElementById('data-inicio').value = formatDateForInput(firstDay);
             document.getElementById('data-fim').value = formatDateForInput(today);
             document.getElementById('transacao-data').value = formatDateForInput(today);
-            
+
             // Load initial data
             carregarTransacoes();
             carregarResumoFinanceiro();
@@ -453,13 +527,13 @@
 
                 const response = await fetch(`/api/transactions?${params.toString()}`);
                 if (!response.ok) throw new Error('Erro ao carregar transações');
-                
+
                 const transacoes = await response.json();
                 renderizarTabelaTransacoes(transacoes);
             } catch (error) {
                 console.error('Erro ao carregar transações:', error);
                 mostrarMensagem('Erro ao carregar transações. Tente novamente.', 'error');
-                
+
                 // Show error in table
                 document.getElementById('tabela-transacoes').innerHTML = `
                     <tr>
@@ -472,42 +546,94 @@
         }
 
         // Load financial summary from API
+        // financas.html (apenas o código do cliente)
         async function carregarResumoFinanceiro() {
             try {
                 const inicio = document.getElementById('data-inicio').value;
                 const fim = document.getElementById('data-fim').value;
 
-                // Build query params
                 const params = new URLSearchParams();
                 if (inicio) params.append('start_date', inicio);
                 if (fim) params.append('end_date', fim);
 
                 const response = await fetch(`/api/finances/summary?${params.toString()}`);
-                if (!response.ok) throw new Error('Erro ao carregar resumo financeiro');
-                
+                if (!response.ok) throw new Error('Erro ao carregar resumo');
+
                 const resumo = await response.json();
                 atualizarResumo(resumo);
+
             } catch (error) {
                 console.error('Erro ao carregar resumo financeiro:', error);
-                mostrarMensagem('Erro ao carregar resumo financeiro. Tente novamente.', 'error');
+                mostrarMensagem('Erro ao carregar dados. Tente recarregar a página.', 'error');
             }
         }
 
-        // Update summary cards
         function atualizarResumo(resumo) {
-            document.getElementById('total-entradas').textContent = formatCurrency(resumo.total_income || 0);
-            document.getElementById('total-saidas').textContent = formatCurrency(resumo.total_expenses || 0);
-            document.getElementById('saldo').textContent = formatCurrency(resumo.balance || 0);
-            document.getElementById('faturamento').textContent = formatCurrency(resumo.total_income || 0);
-            
-            // Update color based on value
-            document.getElementById('saldo').className = `text-2xl font-semibold ${(resumo.balance || 0) >= 0 ? 'positive-value' : 'negative-value'}`;
+            const formatar = valor => {
+                const num = Number(valor) || 0;
+                return num.toLocaleString('pt-BR', {
+                    style: 'currency',
+                    currency: 'BRL'
+                });
+            };
+
+            document.getElementById('total-entradas').textContent = formatar(resumo.total_income);
+            document.getElementById('total-saidas').textContent = formatar(resumo.total_expenses);
+            document.getElementById('saldo').textContent = formatar(resumo.balance);
+            document.getElementById('faturamento').textContent = formatar(resumo.total_income);
+
+            // Atualizar classe do saldo
+            const saldoElement = document.getElementById('saldo');
+            saldoElement.classList.remove('positive-value', 'negative-value');
+            saldoElement.classList.add(resumo.balance >= 0 ? 'positive-value' : 'negative-value');
         }
+
+        // Atualize a rota do resumo no server.js
+        /*app.get('/api/finances/summary', async (req, res) => {
+            try {
+                const { start_date, end_date } = req.query;
+
+                let query = `
+            SELECT 
+                COALESCE(SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END), 0) as total_expenses,
+                COALESCE((
+                    SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END) - 
+                    SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END)
+                ), 0) as balance
+            FROM financial_transactions
+            WHERE 1=1
+        `;
+
+                const params = [];
+
+                if (start_date && end_date) {
+                    query += ' AND transaction_date BETWEEN ? AND ?';
+                    params.push(start_date, end_date);
+                }
+
+                const [result] = await pool.query(query, params);
+
+                res.json({
+                    total_income: parseFloat(result[0].total_income),
+                    total_expenses: parseFloat(result[0].total_expenses),
+                    balance: parseFloat(result[0].balance)
+                });
+
+            } catch (error) {
+                console.error('Erro em /api/finances/summary:', error);
+                res.status(500).json({
+                    total_income: 0,
+                    total_expenses: 0,
+                    balance: 0
+                });
+            }
+        });*/
 
         // Render transactions table
         function renderizarTabelaTransacoes(transacoes) {
             const container = document.getElementById('tabela-transacoes');
-            
+
             if (!transacoes || transacoes.length === 0) {
                 container.innerHTML = `
                     <tr>
@@ -518,13 +644,13 @@
                 `;
                 return;
             }
-            
+
             container.innerHTML = '';
-            
+
             transacoes.forEach(transacao => {
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50';
-                
+
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         ${formatDate(transacao.transaction_date)}
@@ -552,7 +678,7 @@
                         </button>
                     </td>
                 `;
-                
+
                 container.appendChild(row);
             });
         }
@@ -561,7 +687,7 @@
         function initCharts() {
             const monthlyFlowCtx = document.getElementById('monthly-flow-chart').getContext('2d');
             const categoryDistributionCtx = document.getElementById('category-distribution-chart').getContext('2d');
-            
+
             // Monthly Flow Chart
             monthlyFlowChart = new Chart(monthlyFlowCtx, {
                 type: 'bar',
@@ -591,7 +717,7 @@
                         y: {
                             beginAtZero: true,
                             ticks: {
-                                callback: function(value) {
+                                callback: function (value) {
                                     return 'R$ ' + value.toLocaleString('pt-BR');
                                 }
                             }
@@ -600,7 +726,7 @@
                     plugins: {
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
+                                label: function (context) {
                                     let label = context.dataset.label || '';
                                     if (label) {
                                         label += ': ';
@@ -613,7 +739,7 @@
                     }
                 }
             });
-            
+
             // Category Distribution Chart
             categoryDistributionChart = new Chart(categoryDistributionCtx, {
                 type: 'doughnut',
@@ -640,7 +766,7 @@
                         },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
+                                label: function (context) {
                                     const label = context.label || '';
                                     const value = context.raw || 0;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -660,11 +786,11 @@
             document.getElementById('transacao-tipo').value = 'entrada';
             document.getElementById('transacao-categoria').value = 'venda';
             document.getElementById('modal-title').textContent = 'Nova Entrada';
-            
+
             // Set today's date as default
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('transacao-data').value = today;
-            
+
             openModal('modal-transacao');
         });
 
@@ -673,11 +799,11 @@
             document.getElementById('transacao-tipo').value = 'saida';
             document.getElementById('transacao-categoria').value = 'despesa';
             document.getElementById('modal-title').textContent = 'Nova Saída';
-            
+
             // Set today's date as default
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('transacao-data').value = today;
-            
+
             openModal('modal-transacao');
         });
 
@@ -686,16 +812,16 @@
             try {
                 const response = await fetch(`/api/transactions/${id}`);
                 if (!response.ok) throw new Error('Erro ao carregar transação');
-                
+
                 const transacao = await response.json();
-                
+
                 document.getElementById('transacao-id').value = transacao.id;
                 document.getElementById('transacao-descricao').value = transacao.description;
                 document.getElementById('transacao-valor').value = transacao.amount;
                 document.getElementById('transacao-data').value = transacao.transaction_date;
                 document.getElementById('transacao-tipo').value = transacao.type;
                 document.getElementById('transacao-categoria').value = transacao.category;
-                
+
                 document.getElementById('modal-title').textContent = 'Editar Transação';
                 openModal('modal-transacao');
             } catch (error) {
@@ -711,9 +837,9 @@
                     const response = await fetch(`/api/transactions/${id}`, {
                         method: 'DELETE'
                     });
-                    
+
                     if (!response.ok) throw new Error('Erro ao excluir transação');
-                    
+
                     mostrarMensagem('Transação excluída com sucesso!', 'success');
                     carregarTransacoes();
                     carregarResumoFinanceiro();
@@ -727,18 +853,18 @@
         // Save transaction
         document.getElementById('form-transacao').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const id = document.getElementById('transacao-id').value;
             const descricao = document.getElementById('transacao-descricao').value;
             const valor = parseFloat(document.getElementById('transacao-valor').value);
             const data = document.getElementById('transacao-data').value;
             const tipo = document.getElementById('transacao-tipo').value;
             const categoria = document.getElementById('transacao-categoria').value;
-            
+
             // Show loading state
             document.getElementById('submit-text').classList.add('hidden');
             document.getElementById('submit-loading').classList.remove('hidden');
-            
+
             try {
                 let response;
                 const transactionData = {
@@ -748,7 +874,7 @@
                     type: tipo,
                     category: categoria
                 };
-                
+
                 if (id) {
                     // Update existing transaction
                     response = await fetch(`/api/transactions/${id}`, {
@@ -768,9 +894,9 @@
                         body: JSON.stringify(transactionData)
                     });
                 }
-                
+
                 if (!response.ok) throw new Error('Erro ao salvar transação');
-                
+
                 mostrarMensagem('Transação salva com sucesso!', 'success');
                 closeModal('modal-transacao');
                 carregarTransacoes();
@@ -797,7 +923,7 @@
             document.getElementById('data-fim').value = '';
             document.getElementById('filtro-tipo').value = '';
             document.getElementById('filtro-categoria').value = '';
-            
+
             carregarTransacoes();
             carregarResumoFinanceiro();
         });
@@ -828,7 +954,7 @@
             const mensagemSucesso = document.getElementById('mensagem-sucesso');
             const textoErro = document.getElementById('erro-texto');
             const textoSucesso = document.getElementById('sucesso-texto');
-            
+
             if (tipo === 'error') {
                 textoErro.textContent = texto;
                 mensagemErro.classList.remove('hidden');
@@ -838,7 +964,7 @@
                 mensagemSucesso.classList.remove('hidden');
                 mensagemErro.classList.add('hidden');
             }
-            
+
             setTimeout(() => {
                 mensagemErro.classList.add('hidden');
                 mensagemSucesso.classList.add('hidden');
@@ -847,7 +973,8 @@
 
         // Helper functions
         function formatCurrency(value) {
-            return 'R$ ' + value.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+\,)/g, '$1.');
+            const numberValue = typeof value === 'number' ? value : parseFloat(value) || 0;
+            return 'R$ ' + numberValue.toFixed(2).replace('.', ',').replace(/(\d)(?=(\d{3})+,)/g, '$1.');
         }
 
         function formatDate(dateStr) {
@@ -863,7 +990,7 @@
         }
 
         function formatCategory(category) {
-            switch(category) {
+            switch (category) {
                 case 'venda': return 'Venda';
                 case 'despesa': return 'Despesa';
                 case 'investimento': return 'Investimento';
@@ -877,7 +1004,7 @@
         document.getElementById('tabela-ordem').addEventListener('change', carregarTransacoes);
 
         // Search transactions
-        document.getElementById('busca-financa').addEventListener('input', (e) => {
+        /*document.getElementById('busca-financa').addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
             const rows = document.querySelectorAll('#tabela-transacoes tr');
             
@@ -885,7 +1012,7 @@
                 const text = row.textContent.toLowerCase();
                 row.style.display = text.includes(searchTerm) ? '' : 'none';
             });
-        });
+        });*/
 
         // Highlight current page in sidebar
         document.addEventListener('DOMContentLoaded', function () {
@@ -904,4 +1031,5 @@
         });
     </script>
 </body>
+
 </html>
