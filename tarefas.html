@@ -268,13 +268,7 @@
                     Tarefas
                 </h1>
 
-                <div class="flex items-center space-x-4">
-                    <button id="add-task"
-                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
-                        <i class="fas fa-plus mr-2"></i>
-                        <span>Nova Tarefa</span>
-                    </button>
-                </div>
+            
             </header>
 
             <!-- Content -->
@@ -720,7 +714,6 @@
         const toggleSidebar = document.getElementById('toggle-sidebar');
         const mainContent = document.querySelector('.main-content');
         const searchTasksInput = document.getElementById('search-tasks');
-        const addTaskButton = document.getElementById('add-task');
         const taskFormModal = document.getElementById('task-form-modal');
         const taskForm = document.getElementById('task-form');
         const closeTaskForm = document.getElementById('close-task-form');
@@ -823,14 +816,15 @@
                 },
                 dateClick: function (info) {
                     openTaskForm();
-                    const clickedDate = info.date;
+                    const clickedDate = info.date; // Objeto Date no fuso local do calendário/navegador
 
-                    // Ajustar para o timezone local
-                    const localDate = new Date(clickedDate.getTime() - (clickedDate.getTimezoneOffset() * 60000));
-                    taskDueDateInput.value = localDate.toISOString().slice(0, 16);
-
-                    // Alternativa usando timezone fixo
-                    // taskDueDateInput.value = clickedDate.toISOString().split('T')[0] + 'T00:00';
+                    // Formatar para YYYY-MM-DDTHH:MM para o input datetime-local
+                    const year = clickedDate.getFullYear();
+                    const month = (clickedDate.getMonth() + 1).toString().padStart(2, '0');
+                    const day = clickedDate.getDate().toString().padStart(2, '0');
+                    const hours = clickedDate.getHours().toString().padStart(2, '0');
+                    const minutes = clickedDate.getMinutes().toString().padStart(2, '0');
+                    taskDueDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
                 }
             });
 
@@ -840,7 +834,6 @@
         // Set up event listeners
         function setupEventListeners() {
             // Task form modal
-            addTaskButton.addEventListener('click', openTaskForm);
             closeTaskForm.addEventListener('click', closeTaskFormModal);
             cancelTaskForm.addEventListener('click', closeTaskFormModal);
 
@@ -1318,11 +1311,16 @@
                 taskTitleInput.value = task.title;
                 taskDescriptionInput.value = task.description || '';
 
-                // Formata a data corretamente
+                // Formata a data corretamente para o input datetime-local
                 if (task.due_date) {
-                    const dueDate = new Date(task.due_date);
-                    const localDateTime = dueDate.toISOString().slice(0, 16);
-                    taskDueDateInput.value = localDateTime;
+                    const dueDate = new Date(task.due_date); // task.due_date é string UTC
+                    // Formatar para YYYY-MM-DDTHH:MM (hora local do navegador)
+                    const year = dueDate.getFullYear();
+                    const month = (dueDate.getMonth() + 1).toString().padStart(2, '0');
+                    const day = dueDate.getDate().toString().padStart(2, '0');
+                    const hours = dueDate.getHours().toString().padStart(2, '0');
+                    const minutes = dueDate.getMinutes().toString().padStart(2, '0');
+                    taskDueDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
                 } else {
                     taskDueDateInput.value = '';
                 }
@@ -1369,12 +1367,20 @@
             const taskId = taskIdInput.value;
             const title = taskTitleInput.value.trim();
             const description = taskDescriptionInput.value.trim();
-            const dueDate = new Date(taskDueDateInput.value);
-            const timezoneOffset = dueDate.getTimezoneOffset() * 60000;
-            const localDate = new Date(dueDate.getTime() - timezoneOffset);
-            // Converter para formato MySQL
-            const due_date = localDate.toISOString().slice(0, 19).replace('T', ' ');
-            dueDate.setMinutes(dueDate.getMinutes() - dueDate.getTimezoneOffset());
+            
+            // Correção na conversão de data para UTC
+            const taskDueDateValue = taskDueDateInput.value; // Ex: "2024-07-16T16:00"
+            if (!taskDueDateValue) {
+                showNotification('Erro', 'Por favor, selecione uma data de vencimento.', 'error');
+                return;
+            }
+            const dateObject = new Date(taskDueDateValue); // Interpreta como data/hora local do navegador
+
+            // Converte para string 'YYYY-MM-DD HH:MM:SS' representando o momento UTC
+            const due_date = dateObject.toISOString().slice(0, 19).replace('T', ' ');
+            // Ex: Se input é 16:00 em GMT-3, dateObject.toISOString() é "...T19:00:00.000Z", 
+            // e due_date será "YYYY-MM-DD 19:00:00"
+
             const priority = taskPrioritySelect.value;
             const status = taskStatusSelect.value;
             const category_id = taskCategorySelect.value || null;

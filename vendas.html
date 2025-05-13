@@ -478,10 +478,10 @@
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                                     required>
                                     <option value="pending">Pendente</option>
+                                    <option value="paid">Pago</option>
                                     <option value="preparing">Em preparo</option>
-                                    <option value="ready">Pronto</option>
+                                    <option value="on_delivery">Pronto</option>
                                     <option value="delivered">Entregue</option>
-                                    <option value="canceled">Cancelado</option>
                                 </select>
                             </div>
                         </div>
@@ -605,21 +605,6 @@
             document.getElementById('pedidos-pendentes').textContent = summary.pending;
         }
 
-        // Modifique a função atualizarResumo():
-        function atualizarResumo(summary) {
-            document.getElementById('vendas-hoje').textContent =
-                `R$ ${summary.today.toFixed(2).replace('.', ',')}`;
-
-            document.getElementById('vendas-semana').textContent =
-                `R$ ${summary.week.toFixed(2).replace('.', ',')}`;
-
-            document.getElementById('vendas-mes').textContent =
-                `R$ ${summary.month.toFixed(2).replace('.', ',')}`;
-
-            document.getElementById('pedidos-pendentes').textContent =
-                summary.pending;
-        }
-
         // Render sales table
         function renderizarTabelaVendas(vendasData) {
             const container = document.getElementById('tabela-vendas');
@@ -692,10 +677,10 @@
                 let statusColor, statusText;
                 const statusMap = {
                     'pending': { text: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
+                    'paid': { text: 'Pago', color: 'bg-green-100 text-green-800' },
                     'preparing': { text: 'Em Preparo', color: 'bg-blue-100 text-blue-800' },
-                    'ready': { text: 'Pronto', color: 'bg-blue-100 text-blue-800' },
-                    'delivered': { text: 'Entregue', color: 'bg-green-100 text-green-800' },
-                    'canceled': { text: 'Cancelado', color: 'bg-red-100 text-red-800' }
+                    'on_delivery': { text: 'Pronto', color: 'bg-blue-100 text-blue-800' },
+                    'delivered': { text: 'Entregue', color: 'bg-green-100 text-green-800' }
                 };
 
                 const statusInfo = statusMap[venda.status] || { text: 'Desconhecido', color: 'bg-gray-100 text-gray-800' };
@@ -810,7 +795,7 @@
     </div>
     <div class="w-24">
         <label for="item-valor-${itemId}" class="block text-xs font-medium text-gray-500">Valor</label>
-        <input type="number" id="item-valor-${itemId}" value="${item.valor}" step="0.01" min="0" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
+        <input type="number" id="item-valor-${itemId}" value="${item.valor || 0}" step="0.01" min="0" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-sm">
     </div>
     <button type="button" onclick="removeItemRow('${itemId}')" class="mb-1 text-red-500 hover:text-red-700">
         <i class="fas fa-times"></i>
@@ -890,7 +875,21 @@
                 // Preencher campos básicos
                 document.getElementById('venda-id').value = venda.id;
                 document.getElementById('venda-cliente').value = venda.customer_name || venda.customer;
-                document.getElementById('venda-data').value = new Date(venda.order_date).toISOString().slice(0, 16);
+                
+                // Corrigir formatação de data para input datetime-local
+                if (venda.order_date) { // venda.order_date é string UTC
+                    const dateObject = new Date(venda.order_date); // Cria objeto Date (interpretado como local)
+                    // Formatar para YYYY-MM-DDTHH:MM (hora local do navegador)
+                    const year = dateObject.getFullYear();
+                    const month = (dateObject.getMonth() + 1).toString().padStart(2, '0');
+                    const day = dateObject.getDate().toString().padStart(2, '0');
+                    const hours = dateObject.getHours().toString().padStart(2, '0');
+                    const minutes = dateObject.getMinutes().toString().padStart(2, '0');
+                    document.getElementById('venda-data').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                } else {
+                    document.getElementById('venda-data').value = '';
+                }
+                
                 document.getElementById('venda-valor').value = venda.total_amount;
                 document.getElementById('venda-status').value = venda.status;
                 document.getElementById('venda-observacoes').value = venda.observations || '';
@@ -955,7 +954,7 @@
                 // Campos adicionais
                 customer: document.getElementById('venda-cliente').value,
                 channel: document.getElementById('venda-canal').value,
-                total_amount: parseFloat(document.getElementById('venda-valor').value),
+                total: parseFloat(document.getElementById('venda-valor').value),
                 order_date: document.getElementById('venda-data').value,
                 items: [],
                 channelData: {} // ← INICIALIZE O OBJETO AQUI!
@@ -1044,7 +1043,18 @@
         }
 
         // Table order change
-        document.getElementById('tabela-ordem').addEventListener('change', renderizarTabelaVendas);
+        document.getElementById('tabela-ordem').addEventListener('change', function() {
+            // A variável global 'vendas' deve conter a lista completa e não paginada.
+            // Se 'vendas' não for global ou não estiver atualizada, será preciso recarregar.
+            // Assumindo que 'vendas' é a lista completa atual:
+            if (window.vendas && Array.isArray(window.vendas)) {
+                renderizarTabelaVendas(window.vendas);
+            } else {
+                // Fallback: recarregar tudo, que também vai re-renderizar com a nova ordem.
+                // Isso pode não ser o ideal se houver muitos dados ou filtros complexos não tratados aqui.
+                carregarVendas(); 
+            }
+        });
 
         // Script: pagina atual sombra (corrigido)
         document.addEventListener('DOMContentLoaded', function () {

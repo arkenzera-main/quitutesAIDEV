@@ -7,7 +7,7 @@ const port = 3000;
 
 // Configuração do banco de dados
 const dbConfig = {
-    host: 'localhost',
+    host: '127.0.0.1',
     user: 'root',
     password: '',
     database: 'quitutes_ai'
@@ -56,9 +56,6 @@ async function initializeDatabase() {
         });
 
         await connection.query(`USE ${dbConfig.database}`);
-
-
-
 
         await connection.end();
         console.log('Database initialized successfully');
@@ -921,9 +918,50 @@ app.get('/api/tasks/upcoming', async (req, res) => {
             AND t.status != 'completed'
             ORDER BY t.due_date ASC
         `;
-        const [tasks] = await connection.query(query, [start, end]);
+        const [tasksFromDb] = await connection.query(query, [start, end]);
         connection.release();
-        res.json({ tasks });
+
+        const formattedTasks = tasksFromDb.map(task => {
+            let isoDueDate = null;
+            try {
+                if (task.due_date) {
+                    let year, month, day, hours, minutes, seconds;
+                    if (task.due_date instanceof Date && !isNaN(task.due_date.getTime())) {
+                        const dt = task.due_date;
+                        year = dt.getFullYear();
+                        month = dt.getMonth();
+                        day = dt.getDate();
+                        hours = dt.getHours();
+                        minutes = dt.getMinutes();
+                        seconds = dt.getSeconds();
+                    } else {
+                        const dateStr = String(task.due_date);
+                        const parts = dateStr.match(/^(\\d{4})-(\\d{2})-(\\d{2}) (\\d{2}):(\\d{2}):(\\d{2})/);
+                        if (parts) {
+                            year = parseInt(parts[1], 10);
+                            month = parseInt(parts[2], 10) - 1;
+                            day = parseInt(parts[3], 10);
+                            hours = parseInt(parts[4], 10);
+                            minutes = parseInt(parts[5], 10);
+                            seconds = parseInt(parts[6], 10);
+                        } else {
+                            console.error(`[UPCOMING_TASK_DATE_PARSE_ERROR] Formato de data inesperado para task ID ${task.id}: ${dateStr}`);
+                        }
+                    }
+                    if (year !== undefined) {
+                        isoDueDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds)).toISOString();
+                    }
+                }
+            } catch (e) {
+                console.error(`[UPCOMING_TASK_DATE_CONVERT_ERROR] Erro processando data para task ID ${task.id}, due_date: '${task.due_date}':`, e);
+            }
+            return {
+                ...task,
+                due_date: isoDueDate
+            };
+        });
+
+        res.json({ tasks: formattedTasks });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Database error' });
@@ -953,7 +991,7 @@ app.get('/api/tasks', async (req, res) => {
                 t.id,
                 t.title,
                 t.description,
-                CONVERT_TZ(t.due_date, '+00:00', '-03:00') AS due_date,
+                t.due_date,
                 t.priority,
                 t.status,
                 t.category_id,
@@ -1014,11 +1052,46 @@ app.get('/api/tasks', async (req, res) => {
         // Execute queries
         const [tasks] = await connection.query(query, params);
         const [countResult] = await connection.query(countQuery, countParams);
-        // Formata as datas para ISO string
-        const formattedTasks = tasks.map(task => ({
-            ...task,
-            due_date: task.due_date ? new Date(task.due_date).toISOString() : null
-        }));
+
+        const formattedTasks = tasks.map(task => {
+            let isoDueDate = null;
+            try {
+                if (task.due_date) {
+                    let year, month, day, hours, minutes, seconds;
+                    if (task.due_date instanceof Date && !isNaN(task.due_date.getTime())) {
+                        const dt = task.due_date;
+                        year = dt.getFullYear();
+                        month = dt.getMonth();
+                        day = dt.getDate();
+                        hours = dt.getHours();
+                        minutes = dt.getMinutes();
+                        seconds = dt.getSeconds();
+                    } else {
+                        const dateStr = String(task.due_date);
+                        const parts = dateStr.match(/^(\\d{4})-(\\d{2})-(\\d{2}) (\\d{2}):(\\d{2}):(\\d{2})/);
+                        if (parts) {
+                            year = parseInt(parts[1], 10);
+                            month = parseInt(parts[2], 10) - 1;
+                            day = parseInt(parts[3], 10);
+                            hours = parseInt(parts[4], 10);
+                            minutes = parseInt(parts[5], 10);
+                            seconds = parseInt(parts[6], 10);
+                        } else {
+                            console.error(`[TASK_DATE_PARSE_ERROR] Formato de data inesperado para task ID ${task.id}: ${dateStr}`);
+                        }
+                    }
+                    if (year !== undefined) {
+                        isoDueDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds)).toISOString();
+                    }
+                }
+            } catch (e) {
+                console.error(`[TASK_DATE_CONVERT_ERROR] Erro processando data para task ID ${task.id}, due_date: '${task.due_date}':`, e);
+            }
+            return {
+                ...task,
+                due_date: isoDueDate
+            };
+        });
 
         connection.release();
 
@@ -1410,7 +1483,6 @@ app.get('/api/sales', async (req, res) => {
     try {
         const connection = await pool.getConnection();
 
-        // Query corrigida com JOIN
         const [orders] = await connection.query(`
             SELECT 
                 o.id,
@@ -1426,7 +1498,6 @@ app.get('/api/sales', async (req, res) => {
             ORDER BY o.order_date DESC
         `);
 
-        // Query dos itens mantida igual
         const [items] = await connection.query(`
             SELECT oi.order_id, p.name as product, oi.quantity, oi.unit_price
             FROM order_items oi
@@ -1435,15 +1506,51 @@ app.get('/api/sales', async (req, res) => {
 
         connection.release();
 
-        const sales = orders.map(order => ({
-            ...order,
-            items: items.filter(item => item.order_id === order.id).map(item => ({
-                product: item.product,
-                quantity: item.quantity,
-                valor: item.unit_price
-            })),
-            order_date: new Date(order.order_date).toISOString()
-        }));
+        const sales = orders.map(order => {
+            let isoOrderDate = null;
+            try {
+                if (order.order_date) {
+                    let year, month, day, hours, minutes, seconds;
+                    if (order.order_date instanceof Date && !isNaN(order.order_date.getTime())) {
+                        const dt = order.order_date;
+                        year = dt.getFullYear();
+                        month = dt.getMonth(); 
+                        day = dt.getDate();
+                        hours = dt.getHours();
+                        minutes = dt.getMinutes();
+                        seconds = dt.getSeconds();
+                    } else { 
+                        const dateStr = String(order.order_date);
+                        const parts = dateStr.match(/^(\\d{4})-(\\d{2})-(\\d{2}) (\\d{2}):(\\d{2}):(\\d{2})/);
+                        if (parts) {
+                            year = parseInt(parts[1], 10);
+                            month = parseInt(parts[2], 10) - 1; 
+                            day = parseInt(parts[3], 10);
+                            hours = parseInt(parts[4], 10);
+                            minutes = parseInt(parts[5], 10);
+                            seconds = parseInt(parts[6], 10);
+                        } else {
+                            console.error(`[SALES_GET_DATE_PARSE_ERROR] Formato de order_date inesperado para order ID ${order.id}: ${dateStr}`);
+                        }
+                    }
+                    if (year !== undefined) {
+                        isoOrderDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds)).toISOString();
+                    }
+                }
+            } catch (e) {
+                console.error(`[SALES_GET_DATE_CONVERT_ERROR] Erro processando order_date para order ID ${order.id}, data: '${order.order_date}':`, e);
+            }
+
+            return {
+                ...order,
+                items: items.filter(item => item.order_id === order.id).map(item => ({
+                    product: item.product,
+                    quantity: item.quantity,
+                    valor: item.unit_price
+                })),
+                order_date: isoOrderDate
+            };
+        });
 
         res.json(sales);
 
@@ -1451,7 +1558,7 @@ app.get('/api/sales', async (req, res) => {
         console.error('Erro em /api/sales:', error);
         res.status(500).json({
             error: 'Database error',
-            details: error.message // Adicione esta linha para ver o erro exato
+            details: error.message
         });
     }
 });
@@ -1614,15 +1721,31 @@ app.get('/api/sales/summary', async (req, res) => {
 app.post('/api/sales', async (req, res) => {
     let connection;
     try {
-        console.log('---------- NOVA REQUISIÇÃO ----------');
+        console.log('---------- NOVA REQUISIÇÃO POST /api/sales ----------');
         console.log('Body recebido:', JSON.stringify(req.body, null, 2));
-        const { customer, channel, items, total, status, observations, channelData } = req.body;
+        const { 
+            customer, 
+            channel, 
+            items, 
+            status, 
+            observations, 
+            order_date: orderDateString, // String do input datetime-local
+            channelData 
+        } = req.body;
 
         // Validação básica
         if (!items || !Array.isArray(items) || items.length === 0) {
             console.error('Erro: Items array inválido');
             return res.status(400).json({ error: "Lista de itens inválida" });
         }
+        if (!status) return res.status(400).json({ error: "Status é obrigatório." });
+        if (!orderDateString) return res.status(400).json({ error: "Data do pedido é obrigatória." });
+
+
+        // Converter orderDateString (local do cliente) para UTC para o banco
+        const orderDateObject = new Date(orderDateString); // Interpreta como local
+        const order_date_utc = orderDateObject.toISOString().slice(0, 19).replace('T', ' ');
+
 
         connection = await pool.getConnection();
         await connection.beginTransaction();
@@ -1635,7 +1758,7 @@ app.post('/api/sales', async (req, res) => {
         for (const [index, item] of items.entries()) {
             console.log(`Processando item ${index + 1}:`, item);
 
-            if (!item.product || !item.quantity) {
+            if (!item.product_id || !item.quantity) {
                 throw new Error(`Item ${index + 1} está incompleto`);
             }
 
@@ -1644,13 +1767,13 @@ app.post('/api/sales', async (req, res) => {
                  FROM products 
                  WHERE id = ? 
                  LIMIT 1`,
-                [parseInt(item.product)]
+                [parseInt(item.product_id)]
             );
 
-            console.log(`Resultado da consulta do produto ${item.product}:`, product[0]);
+            console.log(`Resultado da consulta do produto ${item.product_id}:`, product[0]);
 
             if (!product.length) {
-                throw new Error(`Produto ID ${item.product} não encontrado`);
+                throw new Error(`Produto ID ${item.product_id} não encontrado`);
             }
 
             if (product[0].current_stock < item.quantity) {
@@ -1694,52 +1817,52 @@ app.post('/api/sales', async (req, res) => {
              ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)`,
             [customer]
         );
+        const customer_id = customerResult.insertId || (await connection.query('SELECT id FROM customers WHERE name = ?', [customer]))[0][0].id;
+
 
         // 4. Inserir a ordem principal
         const [orderResult] = await connection.query(
             `INSERT INTO orders (
                 order_number,
                 customer_id, 
-                total_amount, 
+                total_amount, // Será recalculado e inserido depois
                 status, 
                 observations,
                 channel,
+                order_date, // Usar a data UTC convertida
                 whatsapp_number,
                 ifood_order,
                 attendant
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 orderNumber,
-                customerResult.insertId,
-                total,
+                customer_id,
+                0, // Placeholder para total_amount, será atualizado
                 status,
                 observations || null,
                 channel,
+                order_date_utc, // Data UTC
                 channelData?.whatsapp || null,
                 channelData?.ifood || null,
                 channelData?.attendant || null
             ]
         );
+        const orderId = orderResult.insertId;
 
-        // 5. Inserir itens do pedido
+        // 5. Inserir itens do pedido e calcular total_amount
+        let calculatedTotalAmount = 0;
         for (const item of items) {
-            const [prod] = await connection.query(
-                'SELECT id FROM products WHERE id = ?',
-                [item.product]
-            );
-
+            const itemTotal = parseFloat(item.quantity) * parseFloat(item.unit_price);
+            calculatedTotalAmount += itemTotal;
             await connection.query(
-                `INSERT INTO order_items 
-         (order_id, product_id, quantity, unit_price)
-         VALUES (?, ?, ?, ?)`,
-                [
-                    orderResult.insertId,
-                    prod[0].id,
-                    item.quantity,
-                    item.valor
-                ]
+                `INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)`,
+                [orderId, item.product_id, item.quantity, item.unit_price || item.valor]
             );
         }
+
+        // Atualizar o total_amount na ordem criada
+        await connection.query('UPDATE orders SET total_amount = ? WHERE id = ?', [calculatedTotalAmount, orderId]);
+
 
         // 6. Atualizar estoques
         for (const product of productsToUpdate) {
@@ -1817,70 +1940,131 @@ app.get('/api/sales/:id', async (req, res) => {
 app.put('/api/sales/:id', async (req, res) => {
     let connection;
     try {
-        const { id } = req.params;
+        const { id } = req.params; // ID da venda a ser atualizada
 
-        // Log completo do body recebido para diagnóstico
-        console.log('[DEBUG] Body recebido:', req.body);
+        console.log('[DEBUG] Body recebido para PUT /api/sales/' + id, req.body);
 
-        // Extrair campos com destructoring + valores padrão
         const {
             status = null,
-            observations = null,
-            // Adicione outros campos necessários aqui
-            customer = null,
-            total_amount = null,
-            order_date = null
+            observations = '',
+            customer: customerName = null,
+            order_date: orderDateString, // String do input datetime-local
+            items: updatedItems = [] 
+            // total_amount é omitido, será recalculado
         } = req.body;
 
-        // Validação reforçada
-        const errors = [];
-        if (!status) errors.push('status é obrigatório');
-        if (!observations) errors.push('observations é obrigatório');
+        console.log(`[DEBUG] Status recebido do cliente para venda ID ${id}: ${status}`);
 
-        if (errors.length > 0) {
-            return res.status(400).json({
-                error: 'Campos obrigatórios faltando',
-                missing_fields: errors
-            });
+        const statusMap = {
+            'pending': 'pending', 
+            'paid': 'paid', 
+            'preparing': 'preparing',
+            'on_delivery': 'on_delivery',
+            'delivered': 'delivered'
+        };
+        const dbStatus = statusMap[status] || 'pending';
+        console.log(`[DEBUG] Status a ser salvo no BD para venda ID ${id} (dbStatus): ${dbStatus}`);
+
+        // Mover a declaração para cá
+        let customerIdToUpdate = null; 
+
+        if (!status) {
+            return res.status(400).json({ error: 'Status é obrigatório' });
+        }
+
+        let order_date_utc_for_update = null;
+        if (orderDateString) {
+            const orderDateObject = new Date(orderDateString); 
+            order_date_utc_for_update = orderDateObject.toISOString().slice(0, 19).replace('T', ' ');
         }
 
         connection = await pool.getConnection();
         await connection.beginTransaction();
 
-        // Query de update mais completa (ajuste conforme sua estrutura real)
-        const [result] = await connection.query(
-            `UPDATE orders SET
-                status = ?,
-                observations = ?,
-                customer = ?,
-                total_amount = ?,
-                order_date = ?
-             WHERE id = ?`,
-            [status, observations, customer, total_amount, order_date, id]
-        );
-
-        // Verificação de venda existente
-        if (result.affectedRows === 0) {
-            await connection.rollback();
-            return res.status(404).json({
-                error: 'Venda não encontrada ou nenhum dado modificado',
-                debug_id: id
-            });
+        if (customerName) {
+            // Tenta inserir ou atualizar o nome (ON DUPLICATE KEY UPDATE não faz nada se o nome for o mesmo)
+            // O principal objetivo aqui é garantir que o cliente exista.
+            await connection.query(
+                `INSERT INTO customers (name) VALUES (?) ON DUPLICATE KEY UPDATE name = VALUES(name)`,
+                [customerName]
+            );
+            // Após garantir que o cliente existe, seleciona seu ID.
+            const [customerRows] = await connection.query('SELECT id FROM customers WHERE name = ?', [customerName]);
+            if (customerRows.length > 0) {
+                customerIdToUpdate = customerRows[0].id;
+            } else {
+                // Isso não deveria acontecer se o INSERT/UPDATE acima funcionou
+                await connection.rollback();
+                return res.status(500).json({ error: 'Não foi possível encontrar o ID do cliente após inserção/atualização.' });
+            }
+            console.log(`[DEBUG] customerIdToUpdate para '${customerName}' é: ${customerIdToUpdate}`);
         }
 
-        // Commit explícito
-        await connection.commit();
+        // 1. Deletar itens antigos do pedido
+        await connection.query('DELETE FROM order_items WHERE order_id = ?', [id]);
 
-        // Resposta detalhada
+        // 2. Recalcular o novo total_amount e inserir novos itens
+        let newTotalAmount = 0;
+        if (Array.isArray(updatedItems) && updatedItems.length > 0) {
+            for (const item of updatedItems) {
+                if (!item.product_id || isNaN(parseFloat(item.quantity)) || isNaN(parseFloat(item.unit_price))) {
+                    await connection.rollback();
+                    return res.status(400).json({ error: 'Dados de item inválidos.', item_recebido: item });
+                }
+                const itemTotal = parseFloat(item.quantity) * parseFloat(item.unit_price);
+                newTotalAmount += itemTotal;
+
+                await connection.query(
+                    'INSERT INTO order_items (order_id, product_id, quantity, unit_price) VALUES (?, ?, ?, ?)',
+                    [id, item.product_id, item.quantity, item.unit_price]
+                );
+            }
+        } else {
+             // Se não houver itens, o total é 0, ou você pode optar por não permitir vendas sem itens
+            console.warn(`[WARN] Venda ID ${id} está sendo atualizada sem itens. Total será 0.`);
+        }
+
+
+        // 3. Atualizar a tabela 'orders'
+        let updateOrderQuery = 'UPDATE orders SET status = ?, observations = ?, total_amount = ?';
+        const orderQueryParams = [dbStatus, observations, newTotalAmount];
+
+        if (order_date_utc_for_update) { // Usa a data UTC convertida
+            updateOrderQuery += ', order_date = ?';
+            orderQueryParams.push(order_date_utc_for_update);
+        }
+        if (customerIdToUpdate) {
+            updateOrderQuery += ', customer_id = ?';
+            orderQueryParams.push(customerIdToUpdate);
+        }
+        
+        updateOrderQuery += ' WHERE id = ?';
+        orderQueryParams.push(id);
+
+        console.log('[DEBUG] Final Update Order Query:', updateOrderQuery);
+        console.log('[DEBUG] Final Order Query Params:', orderQueryParams);
+
+        const [result] = await connection.query(updateOrderQuery, orderQueryParams);
+
+        if (result.affectedRows === 0 && result.changedRows === 0) {
+            // Nenhum erro, mas nada mudou. Pode ser que os dados enviados fossem idênticos.
+            // Ou o ID da venda não foi encontrado (embora o delete de itens teria falhado antes).
+            // Considerar se isso deve ser um erro ou apenas uma indicação.
+            // Por ora, se não houve erro na query, consideramos sucesso.
+            console.log(`[INFO] Update para venda ID ${id} não resultou em linhas afetadas ou alteradas.`)
+        }
+
+        await connection.commit();
         res.json({
             success: true,
             message: 'Venda atualizada com sucesso!',
-            updated_fields: {
-                status,
-                observations,
-                customer,
-                total_amount,
-                order_date
+            updated_fields: { 
+                status: dbStatus, 
+                observations, 
+                total_amount: newTotalAmount, 
+                customerId: customerIdToUpdate, 
+                order_date: order_date_utc_for_update, // Usar a variável correta
+                items_count: updatedItems.length 
             }
         });
 
