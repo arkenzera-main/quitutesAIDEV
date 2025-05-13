@@ -77,28 +77,42 @@ app.get('/api/dashboard/summary', async (req, res) => {
     try {
         const connection = await pool.getConnection();
 
-        // Get today's sales
+        // 1. Vendas de hoje
         const [todaySales] = await connection.query(
             `SELECT IFNULL(SUM(total_amount), 0) as total 
              FROM orders 
              WHERE DATE(order_date) = CURDATE()`
         );
 
-        // Get today's orders count
+        // 2. Vendas de ontem (para cálculo da variação)
+        const [yesterdaySales] = await connection.query(
+            `SELECT IFNULL(SUM(total_amount), 0) as total 
+             FROM orders 
+             WHERE DATE(order_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)`
+        );
+
+        // 3. Pedidos de hoje
         const [todayOrders] = await connection.query(
             `SELECT COUNT(*) as count 
              FROM orders 
              WHERE DATE(order_date) = CURDATE()`
         );
 
-        // Get low stock products count
+        // 4. Pedidos de ontem (para cálculo da variação)
+        const [yesterdayOrders] = await connection.query(
+            `SELECT COUNT(*) as count 
+             FROM orders 
+             WHERE DATE(order_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)`
+        );
+
+        // 5. Produtos com estoque baixo
         const [lowStock] = await connection.query(
             `SELECT COUNT(*) as count 
              FROM products 
              WHERE current_stock < minimum_stock`
         );
 
-        // Get new customers this month
+        // 6. Novos clientes este mês
         const [newCustomers] = await connection.query(
             `SELECT COUNT(*) as count 
              FROM customers 
@@ -108,17 +122,35 @@ app.get('/api/dashboard/summary', async (req, res) => {
 
         connection.release();
 
+        // Cálculo das variações percentuais
+        const todaySalesValue = parseFloat(todaySales[0].total) || 0;
+        const yesterdaySalesValue = parseFloat(yesterdaySales[0].total) || 0;
+        const salesChange = yesterdaySalesValue > 0 ?
+            ((todaySalesValue - yesterdaySalesValue) / yesterdaySalesValue * 100) : 0;
+
+        const todayOrdersValue = parseInt(todayOrders[0].count) || 0;
+        const yesterdayOrdersValue = parseInt(yesterdayOrders[0].count) || 0;
+        const ordersChange = yesterdayOrdersValue > 0 ?
+            ((todayOrdersValue - yesterdayOrdersValue) / yesterdayOrdersValue * 100) : 0;
+
         res.json({
-            todaySales: parseFloat(todaySales[0].total) || 0,
-            todayOrders: parseInt(todayOrders[0].count) || 0,
-            lowStockProducts: parseInt(lowStock[0].count) || 0,
-            newCustomers: parseInt(newCustomers[0].count) || 0
+            today_sales: todaySalesValue,
+            sales_change: parseFloat(salesChange.toFixed(1)), // Arredonda para 1 decimal
+            today_orders: todayOrdersValue,
+            orders_change: parseFloat(ordersChange.toFixed(1)),
+            low_stock_count: parseInt(lowStock[0].count) || 0,
+            new_customers: parseInt(newCustomers[0].count) || 0
         });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Database error' });
+        console.error('Error in /api/dashboard/summary:', error);
+        res.status(500).json({
+            error: 'Database error',
+            details: error.message
+        });
     }
 });
+
 
 app.get('/api/dashboard/top-products', async (req, res) => {
     try {
@@ -1786,13 +1818,13 @@ app.put('/api/sales/:id', async (req, res) => {
     let connection;
     try {
         const { id } = req.params;
-        
+
         // Log completo do body recebido para diagnóstico
         console.log('[DEBUG] Body recebido:', req.body);
-        
+
         // Extrair campos com destructoring + valores padrão
-        const { 
-            status = null, 
+        const {
+            status = null,
             observations = null,
             // Adicione outros campos necessários aqui
             customer = null,
@@ -1804,11 +1836,11 @@ app.put('/api/sales/:id', async (req, res) => {
         const errors = [];
         if (!status) errors.push('status é obrigatório');
         if (!observations) errors.push('observations é obrigatório');
-        
+
         if (errors.length > 0) {
-            return res.status(400).json({ 
+            return res.status(400).json({
                 error: 'Campos obrigatórios faltando',
-                missing_fields: errors 
+                missing_fields: errors
             });
         }
 
@@ -1830,7 +1862,7 @@ app.put('/api/sales/:id', async (req, res) => {
         // Verificação de venda existente
         if (result.affectedRows === 0) {
             await connection.rollback();
-            return res.status(404).json({ 
+            return res.status(404).json({
                 error: 'Venda não encontrada ou nenhum dado modificado',
                 debug_id: id
             });
@@ -1858,7 +1890,7 @@ app.put('/api/sales/:id', async (req, res) => {
             console.log('[ROLLBACK] Executando rollback...');
             await connection.rollback();
         }
-        
+
         // Log detalhado do erro
         console.error('[ERROR] Erro na rota PUT /api/sales:', {
             message: error.message,
@@ -1902,194 +1934,6 @@ app.delete('/api/sales/:id', async (req, res) => {
 
 // END VENDAS .HTML ------------------------------------------------------------------------------------------
 
-
-
-
-
-
-
-// SERVER.JS - RELATORIOS.HTML ----------------------------------------------------------------------------------------------------------------------------------------
-
-// CRUD CREATE 
-// Relatórios - Rotas
-
-app.get('/api/reports/recent', async (req, res) => {
-    try {
-        const connection = await pool.getConnection();
-        const [reports] = await connection.query(
-            `SELECT id, name, type, format, created_at as date 
-             FROM reports 
-             ORDER BY created_at DESC 
-             LIMIT 10`
-        );
-        connection.release();
-
-        // Garantir que sempre retornamos um array
-        res.json(reports || []);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao buscar relatórios' });
-    }
-});
-
-app.get('/api/reports/download/:id', async (req, res) => {
-    try {
-        const connection = await pool.getConnection();
-        const [reports] = await connection.query(
-            'SELECT * FROM reports WHERE id = ?',
-            [req.params.id]
-        );
-        connection.release();
-
-        if (reports.length === 0) {
-            return res.status(404).json({ error: 'Relatório não encontrado' });
-        }
-
-        const report = reports[0];
-        const filePath = path.join(__dirname, 'reports', report.file_path);
-
-        res.download(filePath, report.file_path, (err) => {
-            if (err) {
-                console.error('Erro no download:', err);
-                res.status(500).json({ error: 'Erro ao baixar arquivo' });
-            }
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao baixar relatório' });
-    }
-});
-
-
-app.post('/api/reports/preview', async (req, res) => {
-    try {
-        const { type, startDate, endDate, category, status, sort } = req.body;
-        let query;
-        const params = [];
-
-        switch (type) {
-            case 'stock':
-                query = `
-                    SELECT 
-                        p.name,
-                        p.category,
-                        p.current_stock as quantity,
-                        CASE 
-                            WHEN p.current_stock = 0 THEN 'inactive'
-                            ELSE 'active'
-                        END as status
-                    FROM products p
-                    WHERE 1=1
-                `;
-
-                if (category) {
-                    query += ' AND p.category = ?';
-                    params.push(category);
-                }
-                if (status) {
-                    query += status === 'active'
-                        ? ' AND p.current_stock > 0'
-                        : ' AND p.current_stock = 0';
-                }
-                break;
-
-            case 'sales':
-                query = `
-                    SELECT 
-                        o.order_number as name,
-                        'Venda' as category,
-                        SUM(oi.quantity) as quantity,
-                        'active' as status
-                    FROM orders o
-                    JOIN order_items oi ON o.id = oi.order_id
-                    WHERE o.order_date BETWEEN ? AND ?
-                    GROUP BY o.id
-                `;
-                params.push(startDate, endDate);
-                break;
-
-            case 'financial':
-                query = `
-                    SELECT
-                        DATE_FORMAT(o.order_date, '%Y-%m-%d') as name,
-                        'Financeiro' as category,
-                        SUM(o.total_amount) as quantity,
-                        'active' as status
-                    FROM orders o
-                    WHERE o.order_date BETWEEN ? AND ?
-                    GROUP BY DATE(o.order_date)
-                `;
-                params.push(startDate, endDate);
-                break;
-
-            default:
-                return res.status(400).json({ error: 'Tipo de relatório inválido' });
-        }
-
-        // Ordenação
-        const orderBy = {
-            'name_asc': 'ORDER BY name ASC',
-            'name_desc': 'ORDER BY name DESC',
-            'date_asc': 'ORDER BY name ASC',
-            'date_desc': 'ORDER BY name DESC',
-            'quantity_asc': 'ORDER BY quantity ASC',
-            'quantity_desc': 'ORDER BY quantity DESC'
-        }[sort] || '';
-
-        query += ' ' + orderBy;
-
-        const connection = await pool.getConnection();
-        const [results] = await connection.query(query, params);
-        connection.release();
-
-        res.json(results);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao gerar pré-visualização' });
-    }
-});
-
-app.post('/api/reports/export', async (req, res) => {
-    try {
-        const { type, format, startDate, endDate, category, status, sort } = req.body;
-        const connection = await pool.getConnection();
-
-        const [reportResult] = await connection.query(
-            `INSERT INTO reports 
-            (name, type, format, parameters)
-            VALUES (?, ?, ?, ?)`,
-            [`Relatório de ${type}`, type, format,
-            JSON.stringify({ startDate, endDate, category, status, sort })]
-        );
-
-        const reportId = reportResult.insertId;
-        const fileName = `relatorio_${reportId}.${format}`;
-
-        await connection.query(
-            `UPDATE reports SET file_path = ? WHERE id = ?`,
-            [fileName, reportId]
-        );
-
-        connection.release();
-
-        res.json({
-            success: true,
-            reportId,
-            fileName,
-            message: 'Relatório exportado com sucesso'
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erro ao exportar relatório' });
-    }
-});
-
-
-
-
-// END RELATORIOS.HTML ----------------------------------------------------------------------------------------------------------------------------------------
 
 
 // SERVER.JS - SUSTENTABILIDADE.HTML ----------------------------------------------------------------------------------------------------------------------------------------
@@ -2185,6 +2029,6 @@ initializeDatabase().then(() => {
     });
 });
 
-// To run this server:
-// 1. Install dependencies: npm install express mysql2 cors
-// 2. Run the server: node server.js
+// Para rodar o servidor:
+// 1. Instale as dependências: npm install 
+// 2. Rodar o servidor: node server.js

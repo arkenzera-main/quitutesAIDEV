@@ -117,7 +117,7 @@
                                 <span class="nav-text">Vendas</span>
                             </a>
                         </li>
-                         <!-- <li>
+                        <!-- <li>
                             <a href="relatorios.html" class="nav-item flex items-center p-3 rounded-lg hover:bg-indigo-800 transition">
                                 <i class="fas fa-chart-bar mr-3"></i>
                                 <span class="nav-text">Relatórios</span>
@@ -152,7 +152,8 @@
                     Dashboard
                 </h1>
                 <div class="flex items-center space-x-2">
-                    <div class="relative">
+                    <!-- Espaço reservado mantendo a estrutura -->
+                    <div class="relative hidden">
                         <i class="fas text-gray-600 text-xl cursor-pointer hover:text-indigo-600"></i>
                         <span id="notification-count"
                             class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"></span>
@@ -192,11 +193,10 @@
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <div class="flex justify-between items-center mb-4">
                             <h2 class="text-lg font-semibold text-gray-800">Produtos Mais Vendidos</h2>
-                            <button id="filter-products"
-                                class="px-3 py-1 text-sm border rounded-lg bg-indigo-50 text-indigo-600 flex items-center">
-                                <i class="fas fa-filter mr-1"></i>
-                                <span>Filtrar</span>
-                            </button>
+                            <!-- Espaço reservado mantendo o alinhamento -->
+                            <div class="px-3 py-1 opacity-0 pointer-events-none">
+                                &nbsp;
+                            </div>
                         </div>
                         <div class="chart-container">
                             <canvas id="productsChart"></canvas>
@@ -363,10 +363,6 @@
                 window.location.href = '/estoque.html';
             });
 
-            document.getElementById('filter-products').addEventListener('click', function () {
-                // In a real app, this would open a filter modal
-                showNotification('Filtrar produtos por período', 'info');
-            });
 
             // Pagination controls
             document.getElementById('prev-page').addEventListener('click', function () {
@@ -403,32 +399,36 @@
                 const response = await fetch('/api/dashboard/summary');
                 const data = await response.json();
 
-                // Update notification count with low stock products
-                document.getElementById('notification-count').textContent = data.lowStockProducts;
+                // Verifique a estrutura dos dados retornados pela API
+                console.log('Dados do dashboard:', data);
 
-                // Create summary cards
+                // Crie os cards com base nos dados reais
                 const summaryCards = [
                     {
                         title: 'Vendas Hoje',
-                        value: `R$ ${data.todaySales.toFixed(2)}`,
-                        change: '12% em relação a ontem',
+                        value: `R$ ${(data.today_sales || 0).toFixed(2)}`,
+                        change: data.sales_change ?
+                            `${Math.abs(data.sales_change)}% ${data.sales_change > 0 ? 'a mais' : 'a menos'} que ontem` :
+                            'Sem dados de comparação',
                         icon: 'fa-shopping-bag',
                         iconBg: 'bg-indigo-100',
                         iconColor: 'text-indigo-600',
-                        changeColor: 'text-green-500'
+                        changeColor: data.sales_change > 0 ? 'text-green-500' : data.sales_change < 0 ? 'text-red-500' : 'text-gray-500'
                     },
                     {
                         title: 'Pedidos Hoje',
-                        value: data.todayOrders,
-                        change: '8% em relação a ontem',
+                        value: data.today_orders || 0,
+                        change: data.orders_change ?
+                            `${Math.abs(data.orders_change)}% ${data.orders_change > 0 ? 'a mais' : 'a menos'} que ontem` :
+                            'Sem dados de comparação',
                         icon: 'fa-receipt',
                         iconBg: 'bg-green-100',
                         iconColor: 'text-green-600',
-                        changeColor: 'text-green-500'
+                        changeColor: data.orders_change > 0 ? 'text-green-500' : data.orders_change < 0 ? 'text-red-500' : 'text-gray-500'
                     },
                     {
                         title: 'Produtos com Estoque Baixo',
-                        value: data.lowStockProducts,
+                        value: data.low_stock_count || 0,
                         change: 'Precisa de reposição',
                         icon: 'fa-boxes',
                         iconBg: 'bg-yellow-100',
@@ -437,7 +437,7 @@
                     },
                     {
                         title: 'Clientes Novos',
-                        value: data.newCustomers,
+                        value: data.new_customers || 0,
                         change: 'Este mês',
                         icon: 'fa-users',
                         iconBg: 'bg-blue-100',
@@ -453,26 +453,35 @@
                     const cardElement = document.createElement('div');
                     cardElement.className = 'bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition';
                     cardElement.innerHTML = `
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <p class="text-sm font-medium text-gray-500">${card.title}</p>
-                                <h3 class="text-2xl font-bold text-gray-800 mt-1">${card.value}</h3>
-                                <p class="text-sm ${card.changeColor} mt-2 flex items-center">
-                                    <i class="fas ${card.changeColor.includes('red') ? 'fa-exclamation-circle' : 'fa-arrow-up'} mr-1"></i>
-                                    <span>${card.change}</span>
-                                </p>
-                            </div>
-                            <div class="${card.iconBg} p-3 rounded-lg">
-                                <i class="fas ${card.icon} ${card.iconColor} text-xl"></i>
-                            </div>
-                        </div>
-                    `;
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">${card.title}</p>
+                        <h3 class="text-2xl font-bold text-gray-800 mt-1">${card.value}</h3>
+                        <p class="text-sm ${card.changeColor} mt-2 flex items-center">
+                            <i class="fas ${card.changeColor.includes('red') ? 'fa-exclamation-circle' :
+                            card.changeColor.includes('green') ? 'fa-arrow-up' : 'fa-info-circle'} mr-1"></i>
+                            <span>${card.change}</span>
+                        </p>
+                    </div>
+                    <div class="${card.iconBg} p-3 rounded-lg">
+                        <i class="fas ${card.icon} ${card.iconColor} text-xl"></i>
+                    </div>
+                </div>
+            `;
                     cardsContainer.appendChild(cardElement);
                 });
 
             } catch (error) {
                 console.error('Error loading dashboard summary:', error);
                 showNotification('Erro ao carregar dados do dashboard', 'error');
+
+                // Mostrar cards vazios em caso de erro
+                const cardsContainer = document.getElementById('summary-cards');
+                cardsContainer.innerHTML = `
+            <div class="bg-white rounded-xl shadow-sm p-6 col-span-4 text-center">
+                <p class="text-gray-500">Não foi possível carregar os dados do dashboard</p>
+            </div>
+        `;
             }
         }
 
@@ -751,7 +760,8 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-red-500 font-medium">${product.current_stock}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${product.minimum_stock}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <button class="text-indigo-600 hover:text-indigo-900">Repor</button>
+                        <!-- Espaço reservado mantendo o layout -->
+                        <span class="opacity-0">-</span>
                         </td>
                     `;
                     productsContainer.appendChild(row);
