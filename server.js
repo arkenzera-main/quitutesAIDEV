@@ -519,7 +519,7 @@ CREATE TABLE `recipes` (
 app.get('/api/recipes/categories', async (req, res) => {
     try {
         const connection = await pool.getConnection();
-        const [categories] = await connection.query('SELECT DISTINCT category FROM recipes ORDER BY category');
+        const [categories] = await connection.query('SELECT DISTINCT category FROM products ORDER BY category');
         connection.release();
 
         const categoryList = categories.map(c => c.category);
