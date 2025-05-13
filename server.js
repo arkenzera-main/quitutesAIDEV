@@ -1825,11 +1825,11 @@ app.post('/api/sales', async (req, res) => {
             `INSERT INTO orders (
                 order_number,
                 customer_id, 
-                total_amount, // Será recalculado e inserido depois
+                total_amount, 
                 status, 
                 observations,
                 channel,
-                order_date, // Usar a data UTC convertida
+                order_date,
                 whatsapp_number,
                 ifood_order,
                 attendant
