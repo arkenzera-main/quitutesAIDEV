@@ -348,21 +348,21 @@ app.get('/api/products/select', async (req, res) => {
     try {
         const connection = await pool.getConnection();
         const [products] = await connection.query(
-            'SELECT id, name, category, unit FROM products ORDER BY name'
+            "SELECT id, name, category, unit FROM products WHERE category = 'Ingredientes' ORDER BY name"
         );
         connection.release();
 
         if (products.length === 0) {
-            return res.status(200).json([]); // Array vazio
+            return res.status(200).json([]); // Array vazio é uma resposta válida
         }
 
         res.json(products);
 
     } catch (error) {
-        console.error(error);
+        console.error('Erro ao carregar produtos para ingredientes:', error);
         res.status(500).json({
             success: false,
-            error: 'Erro ao carregar produtos'
+            error: 'Erro ao carregar produtos para ingredientes'
         });
     }
 });
@@ -672,7 +672,7 @@ app.get('/api/recipes/:id', async (req, res) => {
 
         // Get ingredients
         const [ingredients] = await connection.query(`
-                    SELECT ri.id, p.name, ri.quantity, ri.unit, ri.notes, 
+                    SELECT ri.id, p.name, ri.quantity, ri.unit, ri.notes, ri.product_id, 
                            CASE WHEN p.current_stock = 0 THEN 1 ELSE 0 END as missing
                     FROM recipe_ingredients ri
                     JOIN products p ON ri.product_id = p.id
@@ -1320,7 +1320,7 @@ app.get('/api/finances/summary', async (req, res) => {
     try {
         const { start_date, end_date } = req.query;
 
-        const [result] = await pool.query(`
+        const [financialResult] = await pool.query(`
             SELECT 
                 COALESCE(SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END), 0) as total_income,
                 COALESCE(SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END), 0) as total_expenses,
@@ -1334,10 +1334,18 @@ app.get('/api/finances/summary', async (req, res) => {
             AND (? IS NULL OR transaction_date <= ?)
         `, [start_date, start_date, end_date, end_date]);
 
+        const [revenueResult] = await pool.query(`
+            SELECT COALESCE(SUM(total_amount), 0) as total_revenue
+            FROM orders
+            WHERE (? IS NULL OR DATE(order_date) >= ?)
+            AND (? IS NULL OR DATE(order_date) <= ?)
+        `, [start_date, start_date, end_date, end_date]);
+
         res.json({
-            total_income: Number(result[0].total_income),
-            total_expenses: Number(result[0].total_expenses),
-            balance: Number(result[0].balance)
+            total_income: Number(financialResult[0].total_income),
+            total_expenses: Number(financialResult[0].total_expenses),
+            balance: Number(financialResult[0].balance),
+            total_revenue: Number(revenueResult[0].total_revenue)
         });
 
     } catch (error) {
@@ -1345,10 +1353,63 @@ app.get('/api/finances/summary', async (req, res) => {
         res.status(500).json({
             total_income: 0,
             total_expenses: 0,
-            balance: 0
+            balance: 0,
+            total_revenue: 0
         });
     }
 });
+
+app.get('/api/finances/monthly-flow-data', async (req, res) => {
+    try {
+        const { period_months = 6 } = req.query; // Padrão para últimos 6 meses
+        const date_threshold = new Date();
+        date_threshold.setMonth(date_threshold.getMonth() - parseInt(period_months));
+        // Garante que seja o primeiro dia do mês calculado para incluir o mês inteiro
+        date_threshold.setDate(1);
+        const startDate = date_threshold.toISOString().split('T')[0];
+
+        const [results] = await pool.query(`
+            SELECT 
+                DATE_FORMAT(transaction_date, '%Y-%m') AS month_year,
+                SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END) AS total_income,
+                SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END) AS total_expenses
+            FROM financial_transactions
+            WHERE transaction_date >= ? 
+            GROUP BY month_year
+            ORDER BY month_year ASC
+        `, [startDate]);
+
+        res.json(results);
+    } catch (error) {
+        console.error('Erro em /api/finances/monthly-flow-data:', error);
+        res.status(500).json({ error: 'Erro ao buscar dados do fluxo mensal' });
+    }
+});
+
+app.get('/api/finances/category-distribution-data', async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+
+        const [results] = await pool.query(`
+            SELECT 
+                category,
+                COALESCE(SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END), 0) AS total_expenses,
+                COALESCE(SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END), 0) AS total_income
+            FROM financial_transactions
+            WHERE (? IS NULL OR transaction_date >= ?)
+            AND (? IS NULL OR transaction_date <= ?)
+            GROUP BY category
+            HAVING total_expenses > 0 OR total_income > 0 
+            ORDER BY category
+        `, [start_date, start_date, end_date, end_date]);
+        
+        res.json(results);
+    } catch (error) {
+        console.error('Erro em /api/finances/category-distribution-data:', error);
+        res.status(500).json({ error: 'Erro ao buscar dados de distribuição por categoria' });
+    }
+});
+
 
 app.get('/api/transactions', async (req, res) => {
     try {
@@ -1402,8 +1463,8 @@ app.get('/api/transactions', async (req, res) => {
 
         res.json(transactions.map(t => ({
             ...t,
-            amount: parseFloat(t.amount)  // Corrigido o parêntese faltante
-        }))); // Fechamento corrigido aqui
+            amount: parseFloat(t.amount)
+        })));
 
     } catch (error) {
         console.error('Erro em /api/transactions:', error);
@@ -1411,40 +1472,33 @@ app.get('/api/transactions', async (req, res) => {
     }
 });
 
-/*app.get('/api/finances/summary', async (req, res) => {
+// Rota para buscar uma transação financeira por ID
+app.get('/api/transactions/:id', async (req, res) => {
     try {
-        const { start_date, end_date } = req.query;
+        const { id } = req.params;
+        const [transaction] = await pool.query(
+            `SELECT id, description, amount, type, category, 
+                    DATE_FORMAT(transaction_date, '%Y-%m-%d') as transaction_date 
+             FROM financial_transactions 
+             WHERE id = ?`,
+            [id]
+        );
 
-        let query = `
-            SELECT 
-                SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END) as total_income,
-                SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END) as total_expenses,
-                (SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END) - 
-                 SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END)) as balance
-            FROM financial_transactions
-            WHERE 1=1
-        `;
-
-        const params = [];
-
-        if (start_date && end_date) {
-            query += ' AND transaction_date BETWEEN ? AND ?';
-            params.push(start_date, end_date);
+        if (transaction.length === 0) {
+            return res.status(404).json({ error: 'Transação não encontrada' });
         }
-
-        const [result] = await pool.query(query, params);
-
-        res.json({
-            total_income: result[0].total_income || 0,
-            total_expenses: result[0].total_expenses || 0,
-            balance: result[0].balance || 0
-        });
+        // Garante que amount seja float
+        const result = {
+            ...transaction[0],
+            amount: parseFloat(transaction[0].amount)
+        };
+        res.json(result);
 
     } catch (error) {
-        console.error('Erro em /api/finances/summary:', error);
-        res.status(500).json({ error: 'Erro ao calcular resumo' });
+        console.error(`Erro em /api/transactions/${req.params.id}:`, error);
+        res.status(500).json({ error: 'Erro ao buscar transação' });
     }
-});*/
+});
 
 app.post('/api/transactions', async (req, res) => {
     try {
@@ -1768,18 +1822,6 @@ app.post('/api/sales', async (req, res) => {
             channelData
         } = req.body;
 
-        const transactionDate = order_date_utc.split(' ')[0];
-        await connection.query(
-            `INSERT INTO financial_transactions 
-    (description, amount, type, category, transaction_date)
-    VALUES (?, ?, 'entrada', 'venda', ?)`,
-            [
-                `Venda ${orderNumber} (${channel})`,
-                calculatedTotalAmount,
-                new Date().toISOString().split('T')[0] // Data atual
-            ]
-        );
-
         // Validação básica
         if (!items || !Array.isArray(items) || items.length === 0) {
             console.error('Erro: Items array inválido');
@@ -1787,6 +1829,7 @@ app.post('/api/sales', async (req, res) => {
         }
         if (!status) return res.status(400).json({ error: "Status é obrigatório." });
         if (!orderDateString) return res.status(400).json({ error: "Data do pedido é obrigatória." });
+        if (!channel) return res.status(400).json({ error: "Canal de venda é obrigatório." });
 
 
         // Converter orderDateString (local do cliente) para UTC para o banco
@@ -1849,14 +1892,33 @@ app.post('/api/sales', async (req, res) => {
         }
 
         // 2. Criar order_number
+        const currentYear = new Date().getFullYear();
+        let prefix = '';
+        switch (channel.toLowerCase()) {
+            case 'whatsapp':
+                prefix = 'WAT';
+                break;
+            case 'ifood':
+                prefix = 'IFO';
+                break;
+            case 'balcao':
+                prefix = 'BAL';
+                break;
+            default:
+                // Fallback ou erro se o canal não for reconhecido
+                await connection.rollback();
+                return res.status(400).json({ error: "Canal de venda inválido." });
+        }
+        
+        const orderNumberPattern = `${prefix}-${currentYear}-%`;
         const [counter] = await connection.query(
             `SELECT MAX(CAST(SUBSTRING_INDEX(order_number, '-', -1) AS UNSIGNED)) AS last_seq 
              FROM orders 
              WHERE order_number LIKE ?`,
-            [`${new Date().getFullYear()}%`]
+            [orderNumberPattern]
         );
         const sequence = (counter[0].last_seq || 0) + 1;
-        const orderNumber = `${new Date().getFullYear()}-${sequence.toString().padStart(4, '0')}`;
+        const orderNumber = `${prefix}-${currentYear}-${sequence.toString().padStart(4, '0')}`;
 
         // 3. Criar ou buscar cliente
         const [customerResult] = await connection.query(
@@ -1910,6 +1972,18 @@ app.post('/api/sales', async (req, res) => {
         // Atualizar o total_amount na ordem criada
         await connection.query('UPDATE orders SET total_amount = ? WHERE id = ?', [calculatedTotalAmount, orderId]);
 
+        // Adicionar registro na tabela financial_transactions
+        const transaction_date_finance = order_date_utc.split(' ')[0]; // Usa a data da ordem
+        await connection.query(
+            `INSERT INTO financial_transactions
+            (description, amount, type, category, transaction_date)
+            VALUES (?, ?, 'entrada', 'Venda', ?)`,
+            [
+                `Venda ${orderNumber} (${channel || 'N/A'})`, // Adiciona fallback para channel
+                calculatedTotalAmount,
+                transaction_date_finance
+            ]
+        );
 
         // 6. Atualizar estoques
         for (const product of productsToUpdate) {
@@ -2149,30 +2223,50 @@ app.put('/api/sales/:id', async (req, res) => {
 
 // Rota para deletar uma venda
 app.delete('/api/sales/:id', async (req, res) => {
+    let connection;
     try {
-        const connection = await pool.getConnection();
+        connection = await pool.getConnection();
         await connection.beginTransaction();
 
+        // Primeiro, buscar o order_number para usar na exclusão da transação financeira
+        const [orderRows] = await connection.query(
+            'SELECT order_number FROM orders WHERE id = ?',
+            [req.params.id]
+        );
+
+        if (orderRows.length === 0) {
+            await connection.rollback();
+            connection.release();
+            return res.status(404).json({ error: 'Venda não encontrada para exclusão.' });
+        }
+        const orderNumber = orderRows[0].order_number;
+
+        // Deletar itens da ordem
         await connection.query('DELETE FROM order_items WHERE order_id = ?', [req.params.id]);
+        
+        // Deletar a ordem principal
         await connection.query('DELETE FROM orders WHERE id = ?', [req.params.id]);
-        await connection.query(`DELETE FROM financial_transactions WHERE description LIKE ?`, [`Venda ${order[0].order_number}%`]
+        
+        // Deletar a transação financeira correspondente
+        await connection.query(
+            `DELETE FROM financial_transactions WHERE description LIKE ?`,
+            [`Venda ${orderNumber}%`]
         );
 
         await connection.commit();
-        connection.release();
+        res.json({ success: true, message: 'Venda excluída com sucesso!' });
 
-        res.json({ success: true });
     } catch (error) {
-        await connection.rollback();
-        connection.release();
-        console.error(error);
-        res.status(500).json({ error: 'Database error' });
+        if (connection) {
+            await connection.rollback();
+        }
+        console.error('Erro ao excluir venda:', error);
+        res.status(500).json({ error: 'Erro no banco de dados ao excluir venda', details: error.message });
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
-
-    const [order] = await connection.query(
-        'SELECT order_number FROM orders WHERE id = ?',
-        [req.params.id]
-    );
 });
 
 // END VENDAS .HTML ------------------------------------------------------------------------------------------

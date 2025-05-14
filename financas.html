@@ -102,7 +102,7 @@
             <a href="index.html">
                 <div class="p-4 flex items-center space-x-3 border-b border-indigo-600">
                     <div class="bg-white p-2 rounded-lg">
-                        <i class="fas fa-cookie-bite text-indigo-700 text-xl"></i>
+                        <img src="img/logomenu.ico" alt="Quitutes Logo" class="h-5 w-5">
                     </div>
                     <span class="logo-text font-bold text-xl">Quitutes</span>
                 </div>
@@ -511,6 +511,18 @@
         // Load transactions from API
         async function carregarTransacoes() {
             try {
+                // Adicionar um indicador de carregamento na tabela
+                document.getElementById('tabela-transacoes').innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
+                            <div class="flex justify-center items-center">
+                                <div class="loading-spinner mr-2"></div>
+                                Carregando transações...
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
                 const inicio = document.getElementById('data-inicio').value;
                 const fim = document.getElementById('data-fim').value;
                 const tipo = document.getElementById('filtro-tipo').value;
@@ -546,7 +558,6 @@
         }
 
         // Load financial summary from API
-        // financas.html (apenas o código do cliente)
         async function carregarResumoFinanceiro() {
             try {
                 const inicio = document.getElementById('data-inicio').value;
@@ -580,55 +591,13 @@
             document.getElementById('total-entradas').textContent = formatar(resumo.total_income);
             document.getElementById('total-saidas').textContent = formatar(resumo.total_expenses);
             document.getElementById('saldo').textContent = formatar(resumo.balance);
-            document.getElementById('faturamento').textContent = formatar(resumo.total_income);
+            document.getElementById('faturamento').textContent = formatar(resumo.total_revenue);
 
             // Atualizar classe do saldo
             const saldoElement = document.getElementById('saldo');
             saldoElement.classList.remove('positive-value', 'negative-value');
             saldoElement.classList.add(resumo.balance >= 0 ? 'positive-value' : 'negative-value');
         }
-
-        // Atualize a rota do resumo no server.js
-        /*app.get('/api/finances/summary', async (req, res) => {
-            try {
-                const { start_date, end_date } = req.query;
-
-                let query = `
-            SELECT 
-                COALESCE(SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END), 0) as total_income,
-                COALESCE(SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END), 0) as total_expenses,
-                COALESCE((
-                    SUM(CASE WHEN type = 'entrada' THEN amount ELSE 0 END) - 
-                    SUM(CASE WHEN type = 'saida' THEN amount ELSE 0 END)
-                ), 0) as balance
-            FROM financial_transactions
-            WHERE 1=1
-        `;
-
-                const params = [];
-
-                if (start_date && end_date) {
-                    query += ' AND transaction_date BETWEEN ? AND ?';
-                    params.push(start_date, end_date);
-                }
-
-                const [result] = await pool.query(query, params);
-
-                res.json({
-                    total_income: parseFloat(result[0].total_income),
-                    total_expenses: parseFloat(result[0].total_expenses),
-                    balance: parseFloat(result[0].balance)
-                });
-
-            } catch (error) {
-                console.error('Erro em /api/finances/summary:', error);
-                res.status(500).json({
-                    total_income: 0,
-                    total_expenses: 0,
-                    balance: 0
-                });
-            }
-        });*/
 
         // Render transactions table
         function renderizarTabelaTransacoes(transacoes) {
@@ -653,7 +622,7 @@
 
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        ${formatDate(transacao.transaction_date)}
+                        ${transacao.date ? formatDate(transacao.date) : 'Data não informada'}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         ${transacao.description}
@@ -692,18 +661,18 @@
             monthlyFlowChart = new Chart(monthlyFlowCtx, {
                 type: 'bar',
                 data: {
-                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                    labels: [],
                     datasets: [
                         {
                             label: 'Entradas',
-                            data: [1200, 1900, 1500, 2000, 1800, 2200],
+                            data: [],
                             backgroundColor: '#10b981',
                             borderColor: '#10b981',
                             borderWidth: 1
                         },
                         {
                             label: 'Saídas',
-                            data: [800, 1200, 1000, 1500, 1300, 900],
+                            data: [],
                             backgroundColor: '#ef4444',
                             borderColor: '#ef4444',
                             borderWidth: 1
@@ -744,16 +713,10 @@
             categoryDistributionChart = new Chart(categoryDistributionCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Vendas', 'Despesas', 'Investimentos', 'Impostos', 'Outros'],
+                    labels: [],
                     datasets: [{
-                        data: [65, 15, 10, 5, 5],
-                        backgroundColor: [
-                            '#10b981',
-                            '#ef4444',
-                            '#3b82f6',
-                            '#f59e0b',
-                            '#8b5cf6'
-                        ],
+                        data: [],
+                        backgroundColor: [],
                         borderWidth: 1
                     }]
                 },
@@ -769,15 +732,87 @@
                                 label: function (context) {
                                     const label = context.label || '';
                                     const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = Math.round((value / total) * 100);
-                                    return `${label}: ${percentage}% (R$ ${value.toLocaleString('pt-BR')})`;
+                                    const total = context.chart.data.datasets[0].data.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    const formattedValue = value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                                    return `${label}: ${percentage}% (${formattedValue})`;
                                 }
                             }
                         }
                     }
                 }
             });
+
+            // Carregar dados para os gráficos
+            updateMonthlyFlowChart(); 
+            updateCategoryDistributionChart(); 
+        }
+
+        async function updateMonthlyFlowChart(periodMonths = 6) {
+            try {
+                const response = await fetch(`/api/finances/monthly-flow-data?period_months=${periodMonths}`);
+                if (!response.ok) throw new Error('Erro ao buscar dados do fluxo mensal');
+                const data = await response.json();
+
+                const labels = data.map(item => {
+                    const [year, month] = item.month_year.split('-');
+                    const date = new Date(year, month - 1);
+                    return date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+                });
+                const incomes = data.map(item => parseFloat(item.total_income));
+                const expenses = data.map(item => parseFloat(item.total_expenses));
+
+                if (monthlyFlowChart) {
+                    monthlyFlowChart.data.labels = labels;
+                    monthlyFlowChart.data.datasets[0].data = incomes;
+                    monthlyFlowChart.data.datasets[1].data = expenses;
+                    monthlyFlowChart.update();
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar gráfico de fluxo mensal:', error);
+                mostrarMensagem('Erro ao carregar dados do gráfico de fluxo mensal.', 'error');
+            }
+        }
+
+        async function updateCategoryDistributionChart() {
+            try {
+                const inicio = document.getElementById('data-inicio').value;
+                const fim = document.getElementById('data-fim').value;
+
+                const params = new URLSearchParams();
+                if (inicio) params.append('start_date', inicio);
+                if (fim) params.append('end_date', fim);
+
+                const response = await fetch(`/api/finances/category-distribution-data?${params.toString()}`);
+                if (!response.ok) throw new Error('Erro ao buscar dados de distribuição por categoria');
+                const data = await response.json();
+
+                const expenseData = data.filter(item => parseFloat(item.total_expenses) > 0);
+
+                const labels = expenseData.map(item => formatCategory(item.category));
+                
+                const CategoriaColors = {
+                    'Venda': '#10b981',
+                    'Despesa': '#ef4444',
+                    'Investimento': '#3b82f6',
+                    'Impostos': '#f59e0b',
+                    'Outros': '#8b5cf6',
+                    'default': '#a0aec0'
+                };
+
+                const chartDataValues = expenseData.map(item => parseFloat(item.total_expenses));
+                const chartBackgroundColors = expenseData.map(item => CategoriaColors[formatCategory(item.category)] || CategoriaColors.default);
+
+                if (categoryDistributionChart) {
+                    categoryDistributionChart.data.labels = labels;
+                    categoryDistributionChart.data.datasets[0].data = chartDataValues;
+                    categoryDistributionChart.data.datasets[0].backgroundColor = chartBackgroundColors;
+                    categoryDistributionChart.update();
+                }
+            } catch (error) {
+                console.error('Erro ao atualizar gráfico de distribuição por categoria:', error);
+                mostrarMensagem('Erro ao carregar dados do gráfico de categorias.', 'error');
+            }
         }
 
         // Open modal for new transaction
@@ -915,17 +950,23 @@
         document.getElementById('btn-filtrar').addEventListener('click', () => {
             carregarTransacoes();
             carregarResumoFinanceiro();
+            updateCategoryDistributionChart();
         });
 
         // Clear filters
         document.getElementById('btn-limpar').addEventListener('click', () => {
-            document.getElementById('data-inicio').value = '';
-            document.getElementById('data-fim').value = '';
+            // Set default dates
+            const today = new Date();
+            const firstDayCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('data-inicio').value = formatDateForInput(firstDayCurrentMonth);
+            document.getElementById('data-fim').value = formatDateForInput(today);
+            
             document.getElementById('filtro-tipo').value = '';
             document.getElementById('filtro-categoria').value = '';
 
             carregarTransacoes();
             carregarResumoFinanceiro();
+            updateCategoryDistributionChart();
         });
 
         // Modal functions
@@ -978,8 +1019,19 @@
         }
 
         function formatDate(dateStr) {
-            const date = new Date(dateStr);
-            return date.toLocaleDateString('pt-BR');
+            if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                console.warn('Formato de data inválido ou data ausente:', dateStr);
+                return 'Data inválida';
+            }
+            const [year, month, day] = dateStr.split('-');
+            // new Date(year, monthIndex, day) - monthIndex é 0-11
+            const date = new Date(Number(year), Number(month) - 1, Number(day));
+            
+            if (isNaN(date.getTime())) { // Verifica se a data é válida após a construção
+                console.warn('Objeto Date inválido para:', dateStr);
+                return 'Data inválida';
+            }
+            return date.toLocaleDateString('pt-BR'); // Formata para DD/MM/YYYY no fuso local
         }
 
         function formatDateForInput(date) {
@@ -1028,6 +1080,11 @@
                     link.classList.add('bg-indigo-800');
                 }
             });
+        });
+
+        // Chart period change
+        document.getElementById('chart-period').addEventListener('change', function() {
+            updateMonthlyFlowChart(this.value);
         });
     </script>
 </body>

@@ -67,7 +67,7 @@
             <a href="/">
                 <div class="p-4 flex items-center space-x-3 border-b border-indigo-600">
                     <div class="bg-white p-2 rounded-lg">
-                        <i class="fas fa-cookie-bite text-indigo-700 text-xl"></i>
+                        <img src="img/logomenu.ico" alt="Quitutes Logo" class="h-5 w-5">
                     </div>
                     <span class="logo-text font-bold text-xl">Quitutes</span>
                 </div>
@@ -493,10 +493,12 @@
 
                 // Prepare chart data based on period
                 let labels, values;
+                let chartTitle = 'Vendas Semanais'; // Default title
 
                 if (period === 'week') {
                     labels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
                     values = Array(7).fill(0);
+                    chartTitle = 'Vendas Semanais';
 
                     data.forEach(item => {
                         const dayIndex = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -512,6 +514,7 @@
 
                     labels = Array.from({ length: daysInMonth }, (_, i) => i + 1);
                     values = Array(daysInMonth).fill(0);
+                    chartTitle = 'Vendas Mensais';
 
                     data.forEach(item => {
                         if (item.day >= 1 && item.day <= daysInMonth) {
@@ -521,6 +524,7 @@
                 } else { // year
                     labels = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
                     values = Array(12).fill(0);
+                    chartTitle = 'Vendas Anuais';
 
                     data.forEach(item => {
                         const monthIndex = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -531,6 +535,9 @@
                         }
                     });
                 }
+
+                // Update chart title
+                document.querySelector('#salesChart').closest('.bg-white').querySelector('h2').textContent = chartTitle;
 
                 // Create or update chart
                 const ctx = document.getElementById('salesChart').getContext('2d');

@@ -70,7 +70,7 @@
             <a href="/">
                 <div class="p-4 flex items-center space-x-3 border-b border-indigo-600">
                     <div class="bg-white p-2 rounded-lg">
-                        <i class="fas fa-cookie-bite text-indigo-700 text-xl"></i>
+                        <img src="img/logomenu.ico" alt="Quitutes Logo" class="h-5 w-5">
                     </div>
                     <span class="logo-text font-bold text-xl">Quitutes</span>
                 </div>
@@ -245,7 +245,8 @@
                                     <option value="Salgado Assado">Salgado Assado</option>
                                     <option value="Salgado Frito">Salgado Frito</option>
                                     <option value="Geladinho">Geladinho</option>
-                                    <option value="outros">Outros</option>
+                                    <option value="Ingredientes">Ingredientes</option>
+                                    <option value="Outros">Outros</option>
                                 </select>
                                 <i
                                     class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
@@ -335,13 +336,15 @@
                             class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
                         <select id="product-category" required
                             class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="Bolo">Bolo</option>
+                                    <option value="">Todas categorias</option>
+                                    <option value="Bolo">Bolo</option>
                                     <option value="Sobremesa">Sobremesa</option>
                                     <option value="Doce">Doce</option>
                                     <option value="Salgado Assado">Salgado Assado</option>
                                     <option value="Salgado Frito">Salgado Frito</option>
                                     <option value="Geladinho">Geladinho</option>
-                                    <option value="outros">Outros</option>
+                                    <option value="Ingredientes">Ingredientes</option>
+                                    <option value="Outros">Outros</option>
                         </select>
                         <!-- Categories will be populated by JavaScript -->
                     </div>
@@ -416,13 +419,15 @@
                             class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
                         <select id="edit-product-category" required
                             class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="Bolo">Bolo</option>
+                                    <option value="">Todas categorias</option>
+                                    <option value="Bolo">Bolo</option>
                                     <option value="Sobremesa">Sobremesa</option>
                                     <option value="Doce">Doce</option>
                                     <option value="Salgado Assado">Salgado Assado</option>
                                     <option value="Salgado Frito">Salgado Frito</option>
                                     <option value="Geladinho">Geladinho</option>
-                                    <option value="outros">Outros</option>
+                                    <option value="Ingredientes">Ingredientes</option>
+                                    <option value="Outros">Outros</option>
                         </select>
                     </div>
                     <div class="grid grid-cols-2 gap-4 mb-4">
@@ -667,13 +672,16 @@
                 const categoryFilter = document.getElementById('filter-category');
 
                 // Adiciona as opções fixas (hardcoded)
-                categoryFilter.innerHTML = `<option value="Bolo">Bolo</option>
+                categoryFilter.innerHTML = `
+                                    <option value="">Todas categorias</option>
+                                    <option value="Bolo">Bolo</option>
                                     <option value="Sobremesa">Sobremesa</option>
                                     <option value="Doce">Doce</option>
                                     <option value="Salgado Assado">Salgado Assado</option>
                                     <option value="Salgado Frito">Salgado Frito</option>
                                     <option value="Geladinho">Geladinho</option>
-                                    <option value="outros">Outros</option>`;
+                                    <option value="Ingredientes">Ingredientes</option>
+                                    <option value="Outros">Outros</option>`;
 
                 // Se houver um filtro de categoria selecionado, define o valor
                 if (currentCategoryFilter) {
