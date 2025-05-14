@@ -28,8 +28,7 @@ CREATE TABLE `products` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
-
--- Vendas/Pedidos
+-- Vendas/pedidos
 CREATE TABLE `orders` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `order_number` varchar(20) NOT NULL,
@@ -42,10 +41,13 @@ CREATE TABLE `orders` (
   `whatsapp_number` varchar(20) DEFAULT NULL,
   `ifood_order` varchar(20) DEFAULT NULL,
   `attendant` varchar(50) DEFAULT NULL,
+  `payment_method` enum('dinheiro','cartao_credito','cartao_debito','pix','outro') DEFAULT NULL COMMENT 'Forma de pagamento utilizada na venda',
+  `amount_received` decimal(10,2) DEFAULT NULL COMMENT 'Valor recebido do cliente',
+  `change_given` decimal(10,2) DEFAULT NULL COMMENT 'Troco devolvido ao cliente',
   PRIMARY KEY (`id`),
   KEY `customer_id` (`customer_id`),
   CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`customer_id`) REFERENCES `customers` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
 
 -- Produtos vendidos/pedidos
@@ -89,11 +91,11 @@ CREATE TABLE `tasks` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   `reminder_sent` tinyint(1) DEFAULT 0,
+  `all_day` tinyint(1) DEFAULT 0,
   PRIMARY KEY (`id`),
   KEY `category_id` (`category_id`),
   CONSTRAINT `tasks_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `task_categories` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
-
 
 
 -- Receitas

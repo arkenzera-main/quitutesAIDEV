@@ -49,19 +49,63 @@ const pool = mysql.createPool(dbConfig);
 
 // Database initialization
 async function initializeDatabase() {
+    let connection; // Conexão de teste inicial
     try {
-        const connection = await mysql.createConnection({
+        // 1. Tenta conectar ao servidor MySQL (sem selecionar um banco de dados ainda)
+        connection = await mysql.createConnection({
             host: dbConfig.host,
             user: dbConfig.user,
             password: dbConfig.password
         });
+        console.log('[DB_INIT] Successfully connected to MySQL server.');
 
-        await connection.query(`USE ${dbConfig.database}`);
-
+        // 2. Tenta criar o banco de dados se ele não existir
+        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbConfig.database}\``);
+        console.log(`[DB_INIT] Database '${dbConfig.database}' ensured (created if not existed).`);
+        
+        // 3. Tenta usar o banco de dados especificado com a conexão de teste
+        await connection.query(`USE \`${dbConfig.database}\``);
+        console.log(`[DB_INIT] Successfully selected database '${dbConfig.database}' with test connection.`);
+        
+        // Fecha a conexão de teste inicial, pois o pool cuidará das conexões para as rotas
         await connection.end();
-        console.log('Database initialized successfully');
+        console.log('[DB_INIT] Initial test connection closed.');
+        connection = null; // Garante que não tentaremos fechar de novo no finally se já fechou aqui
+
+        // 4. Testa o pool de conexões
+        const poolConnection = await pool.getConnection();
+        console.log('[DB_INIT] Successfully acquired a test connection from the pool.');
+        // Realiza uma query simples para garantir que o pool está funcional com o banco de dados
+        await poolConnection.query('SELECT 1');
+        console.log('[DB_INIT] Test query on pool connection successful.');
+        poolConnection.release();
+        console.log('[DB_INIT] Pool test connection released.');
+
+        console.log('----------------------------------------------------');
+        console.log('DATABASE INITIALIZED AND CONNECTION POOL IS READY.');
+        console.log('----------------------------------------------------');
+
     } catch (error) {
-        console.error('Error initializing database:', error);
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+        console.error('!!! CRITICAL ERROR DURING DATABASE INITIALIZATION !!!');
+        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+        console.error('Error details:', error.message);
+        if (error.sqlMessage) {
+            console.error('SQL Message:', error.sqlMessage);
+        }
+        if (error.code) {
+            console.error('Error Code:', error.code);
+        }
+        console.error('Check your database server, credentials, and database name.');
+        console.error('Server will not start due to database initialization failure.');
+        if (connection) { // Se a conexão de teste inicial ainda estiver aberta e causou o erro
+            try {
+                await connection.end();
+            } catch (e) {
+                console.error('Error closing initial test connection during error handling:', e.message);
+            }
+        }
+        process.exit(1); // Encerra o processo se a inicialização do banco falhar
     }
 }
 
@@ -2162,6 +2206,47 @@ app.put('/api/sales/:id', async (req, res) => {
             console.log(`[INFO] Update para venda ID ${id} não resultou em linhas afetadas ou alteradas.`)
         }
 
+        // Atualizar a transação financeira correspondente
+        const [orderData] = await connection.query(
+            'SELECT order_number FROM orders WHERE id = ?',
+            [id]
+        );
+
+        if (orderData.length > 0) {
+            const orderNumber = orderData[0].order_number;
+            const transactionDescription = `Venda ${orderNumber}%`; // Usar LIKE para flexibilidade
+
+            // Determinar a data da transação a partir da order_date atualizada, se disponível
+            let transactionDateForUpdate;
+            if (order_date_utc_for_update) {
+                transactionDateForUpdate = order_date_utc_for_update.split(' ')[0];
+            } else {
+                // Se a order_date não foi atualizada, buscar a existente
+                const [currentOrderDate] = await connection.query(
+                    'SELECT DATE_FORMAT(order_date, \'%Y-%m-%d\') as formatted_date FROM orders WHERE id = ?',
+                    [id]
+                );
+                if (currentOrderDate.length > 0) {
+                    transactionDateForUpdate = currentOrderDate[0].formatted_date;
+                } else {
+                    // Fallback para a data atual se tudo mais falhar (pouco provável)
+                    transactionDateForUpdate = new Date().toISOString().split('T')[0];
+                }
+            }
+            
+            await connection.query(
+                `UPDATE financial_transactions 
+                 SET amount = ?, transaction_date = ?
+                 WHERE description LIKE ? 
+                 AND type = 'entrada' 
+                 AND category = 'Venda'`,
+                [newTotalAmount, transactionDateForUpdate, transactionDescription]
+            );
+            console.log(`[INFO] Transação financeira para ${transactionDescription} atualizada para ${newTotalAmount} na data ${transactionDateForUpdate}`);
+        } else {
+            console.warn(`[WARN] Não foi possível encontrar order_number para a venda ID ${id} para atualizar a transação financeira.`);
+        }
+
         await connection.commit();
         res.json({
             success: true,
@@ -2202,11 +2287,14 @@ app.put('/api/sales/:id', async (req, res) => {
         }
     }
 
+    // Removido daqui pois a conexão já foi liberada no finally
+    /*
     const [order] = await connection.query(
         'SELECT order_number, total_amount, order_date FROM orders WHERE id = ?',
         [id]
     );
     const transactionDate = order[0].order_date.toISOString().split('T')[0];
+    */
 });
 
 // Rota para deletar uma venda
@@ -2352,6 +2440,17 @@ initializeDatabase().then(() => {
     app.listen(port, () => {
         console.log(`Server running at http://localhost:${port}`);
     });
+}).catch(error => {
+    // Este catch é para o caso de initializeDatabase() em si lançar uma exceção
+    // que não seja pega internamente antes do process.exit(1) ou se o .then() falhar.
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('!!! FAILED TO INITIALIZE DATABASE AND START SERVER !!!');
+    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+    console.error('Error details:', error.message);
+    if (error.stack) {
+        console.error(error.stack);
+    }
+    process.exit(1);
 });
 
 // Para rodar o servidor:

@@ -488,6 +488,10 @@
                                             Vencimento*</label>
                                         <input type="datetime-local" id="task-due-date" required
                                             class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                        <div class="mt-2">
+                                            <input type="checkbox" id="task-all-day" class="mr-2">
+                                            <label for="task-all-day" class="text-sm text-gray-700">Dia inteiro</label>
+                                        </div>
                                     </div>
                                     <div>
                                         <label for="task-priority"
@@ -728,6 +732,7 @@
         const taskReminderCheckbox = document.getElementById('task-reminder');
         const reminderOptions = document.getElementById('reminder-options');
         const taskReminderTimeSelect = document.getElementById('task-reminder-time');
+        const taskAllDayCheckbox = document.getElementById('task-all-day');
         const addTaskCategoryButton = document.getElementById('add-task-category');
         const taskCategoryModal = document.getElementById('task-category-modal');
         const closeTaskCategoryModal = document.getElementById('close-task-category-modal');
@@ -815,15 +820,25 @@
                     showTaskDetails(taskId);
                 },
                 dateClick: function (info) {
-                    openTaskForm();
-                    const clickedDate = info.date; // Objeto Date no fuso local do calendário/navegador
+                    openTaskForm(); // No modo "add", isto já define taskAllDayCheckbox.checked = false e taskDueDateInput.type = 'datetime-local'
+                    
+                    const clickedDate = info.date; 
+                    // REMOVIDO: taskAllDayCheckbox.checked = info.allDay; // Não queremos que o clique no calendário marque o checkbox para novas tarefas
 
-                    // Formatar para YYYY-MM-DDTHH:MM para o input datetime-local
                     const year = clickedDate.getFullYear();
                     const month = (clickedDate.getMonth() + 1).toString().padStart(2, '0');
                     const day = clickedDate.getDate().toString().padStart(2, '0');
-                    const hours = clickedDate.getHours().toString().padStart(2, '0');
-                    const minutes = clickedDate.getMinutes().toString().padStart(2, '0');
+                    
+                    // taskDueDateInput é 'datetime-local' devido ao openTaskForm() no modo 'add'.
+                    // Preenchemos com a data clicada. Se info.allDay for true, usamos 00:00 como hora.
+                    let hours, minutes;
+                    if (info.allDay) {
+                        hours = '00';
+                        minutes = '00';
+                    } else {
+                        hours = clickedDate.getHours().toString().padStart(2, '0');
+                        minutes = clickedDate.getMinutes().toString().padStart(2, '0');
+                    }
                     taskDueDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
                 }
             });
@@ -846,6 +861,40 @@
                     reminderOptions.classList.remove('hidden');
                 } else {
                     reminderOptions.classList.add('hidden');
+                }
+            });
+
+            // All-day checkbox
+            taskAllDayCheckbox.addEventListener('change', function() {
+                const dueDateValue = taskDueDateInput.value;
+                if (this.checked) {
+                    // Mudar para type="date"
+                    taskDueDateInput.type = 'date';
+                    // Se tinha um valor datetime-local, converter para date (YYYY-MM-DD)
+                    if (dueDateValue && dueDateValue.includes('T')) {
+                        taskDueDateInput.value = dueDateValue.split('T')[0];
+                    }
+                } else {
+                    // Mudar de volta para type="datetime-local"
+                    taskDueDateInput.type = 'datetime-local';
+                    // Se tinha um valor date, adicionar uma hora padrão (ex: 00:00)
+                    // ou manter o valor se já estiver no formato datetime-local (improvável vir daqui)
+                    if (dueDateValue && !dueDateValue.includes('T')) {
+                        // Pegar a hora atual como padrão se estiver mudando de 'dia inteiro' para específico
+                        const now = new Date();
+                        const hours = now.getHours().toString().padStart(2, '0');
+                        const minutes = now.getMinutes().toString().padStart(2, '0');
+                        taskDueDateInput.value = dueDateValue + `T${hours}:${minutes}`; 
+                    } else if (!dueDateValue) {
+                        // Se estava vazio, pode definir a data atual com hora atual
+                        const now = new Date();
+                        const year = now.getFullYear();
+                        const month = (now.getMonth() + 1).toString().padStart(2, '0');
+                        const day = now.getDate().toString().padStart(2, '0');
+                        const hours = now.getHours().toString().padStart(2, '0');
+                        const minutes = now.getMinutes().toString().padStart(2, '0');
+                        taskDueDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                    }
                 }
             });
 
@@ -1083,19 +1132,27 @@
                 }
 
                 // Data formatada
-                const options = {
-                    timeZone: 'America/Sao_Paulo',
-                    hour12: false
-                };
-                const formattedDate = dueDate.toLocaleString('pt-BR', {
-                    weekday: 'long',
-                    day: '2-digit',
-                    month: 'long',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'America/Sao_Paulo'
-                });
+                let formattedDate;
+                if (task.all_day) {
+                    formattedDate = dueDate.toLocaleDateString('pt-BR', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                        timeZone: 'UTC' // Mostrar a data como está, sem conversão de fuso para a hora
+                    });
+                    formattedDate += ' <span class="text-xs text-gray-500">(Dia inteiro)</span>';
+                } else {
+                    formattedDate = dueDate.toLocaleString('pt-BR', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'America/Sao_Paulo'
+                    });
+                }
 
                 // Get category
                 const category = categories.find(cat => cat.id === task.category_id);
@@ -1200,13 +1257,25 @@
                 today.setHours(0, 0, 0, 0);
 
                 // Format date
-                const formattedDate = dueDate.toLocaleDateString('pt-BR', {
-                    weekday: 'short',
-                    day: '2-digit',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                let formattedDate;
+                if (task.all_day) {
+                    formattedDate = dueDate.toLocaleDateString('pt-BR', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'short',
+                        timeZone: 'UTC' // Mostrar a data como está
+                    });
+                    formattedDate += ' <span class="text-xs text-gray-500">(Dia inteiro)</span>';
+                } else {
+                    formattedDate = dueDate.toLocaleDateString('pt-BR', {
+                        weekday: 'short',
+                        day: '2-digit',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        // timeZone: 'America/Sao_Paulo' // Mantém local se não for all_day
+                    });
+                }
 
                 // Get category
                 const category = categories.find(cat => cat.id === task.category_id);
@@ -1291,10 +1360,17 @@
 
             // Add new events
             tasks.forEach(task => {
+                let eventStart = task.due_date; // Esta é uma string ISO UTC do backend, ex: YYYY-MM-DDTHH:mm:ssZ ou YYYY-MM-DD HH:MM:SS
+                if (task.all_day && task.due_date) {
+                    // Se for dia inteiro, pegamos apenas a parte da data YYYY-MM-DD
+                    // A data do backend pode ser "YYYY-MM-DD HH:MM:SS", então pegamos a primeira parte
+                    eventStart = task.due_date.split('T')[0].split(' ')[0]; 
+                }
+
                 calendar.addEvent({
                     title: task.title,
-                    start: task.due_date,
-                    allDay: false,
+                    start: eventStart, 
+                    allDay: task.all_day || false, 
                     color: getPriorityColor(task.priority),
                     textColor: '#ffffff',
                     taskId: task.id
@@ -1310,17 +1386,28 @@
                 taskIdInput.value = task.id;
                 taskTitleInput.value = task.title;
                 taskDescriptionInput.value = task.description || '';
+                taskAllDayCheckbox.checked = task.all_day || false; // Marcar/desmarcar o checkbox primeiro
 
-                // Formata a data corretamente para o input datetime-local
+                if (task.all_day) {
+                    taskDueDateInput.type = 'date';
+                } else {
+                    taskDueDateInput.type = 'datetime-local';
+                }
+
+                // Formata a data corretamente para o input
                 if (task.due_date) {
-                    const dueDate = new Date(task.due_date); // task.due_date é string UTC
-                    // Formatar para YYYY-MM-DDTHH:MM (hora local do navegador)
+                    const dueDate = new Date(task.due_date); // task.due_date é string ISO UTC
                     const year = dueDate.getFullYear();
                     const month = (dueDate.getMonth() + 1).toString().padStart(2, '0');
                     const day = dueDate.getDate().toString().padStart(2, '0');
-                    const hours = dueDate.getHours().toString().padStart(2, '0');
-                    const minutes = dueDate.getMinutes().toString().padStart(2, '0');
-                    taskDueDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                    
+                    if (task.all_day) { 
+                        taskDueDateInput.value = `${year}-${month}-${day}`;
+                    } else {
+                        const hours = dueDate.getHours().toString().padStart(2, '0');
+                        const minutes = dueDate.getMinutes().toString().padStart(2, '0');
+                        taskDueDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`;
+                    }
                 } else {
                     taskDueDateInput.value = '';
                 }
@@ -1342,8 +1429,19 @@
                 document.getElementById('task-form-title').textContent = 'Nova Tarefa';
                 taskIdInput.value = '';
                 taskForm.reset();
-                taskTitleInput.value = ''; // Adicione esta linha
-                taskDueDateInput.valueAsDate = new Date();
+                taskTitleInput.value = ''; 
+                taskAllDayCheckbox.checked = false; // Default para nova tarefa
+                taskDueDateInput.type = 'datetime-local'; // Padrão para nova tarefa
+                // taskDueDateInput.valueAsDate = new Date(); // Pode ser definido para data/hora atual
+                // Limpar o valor explicitamente ou definir um padrão
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = (now.getMonth() + 1).toString().padStart(2, '0');
+                const day = now.getDate().toString().padStart(2, '0');
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                taskDueDateInput.value = `${year}-${month}-${day}T${hours}:${minutes}`; 
+
                 taskPrioritySelect.value = 'medium';
                 taskStatusSelect.value = 'pending';
                 taskCategorySelect.value = '';
@@ -1368,18 +1466,28 @@
             const title = taskTitleInput.value.trim();
             const description = taskDescriptionInput.value.trim();
             
-            // Correção na conversão de data para UTC
-            const taskDueDateValue = taskDueDateInput.value; // Ex: "2024-07-16T16:00"
+            const taskDueDateValue = taskDueDateInput.value; 
+            const isAllDay = taskAllDayCheckbox.checked;
+
             if (!taskDueDateValue) {
                 showNotification('Erro', 'Por favor, selecione uma data de vencimento.', 'error');
                 return;
             }
-            const dateObject = new Date(taskDueDateValue); // Interpreta como data/hora local do navegador
+            
+            let due_date_iso;
+            let dateObjectForIsoConversion;
 
+            if (isAllDay) {
+                // Se for dia inteiro, taskDueDateValue é "YYYY-MM-DD"
+                // Convertemos para um objeto Date assumindo T00:00:00 local para depois converter para UTC.
+                dateObjectForIsoConversion = new Date(taskDueDateValue + 'T00:00:00'); 
+            } else {
+                // Se não for dia inteiro, taskDueDateValue é "YYYY-MM-DDTHH:MM"
+                dateObjectForIsoConversion = new Date(taskDueDateValue); 
+            }
+            
             // Converte para string 'YYYY-MM-DD HH:MM:SS' representando o momento UTC
-            const due_date = dateObject.toISOString().slice(0, 19).replace('T', ' ');
-            // Ex: Se input é 16:00 em GMT-3, dateObject.toISOString() é "...T19:00:00.000Z", 
-            // e due_date será "YYYY-MM-DD 19:00:00"
+            due_date_iso = dateObjectForIsoConversion.toISOString().slice(0, 19).replace('T', ' ');
 
             const priority = taskPrioritySelect.value;
             const status = taskStatusSelect.value;
@@ -1388,8 +1496,8 @@
             const reminder_minutes = reminder ? parseInt(taskReminderTimeSelect.value) : null;
 
             console.log('Dados do formulário:', {
-                title, description, due_date, priority, status,
-                category_id, reminder_minutes
+                title, description, due_date: due_date_iso, priority, status,
+                category_id, reminder_minutes, all_day: isAllDay
             });
 
             // Validação básica
@@ -1398,7 +1506,7 @@
                 return;
             }
 
-            if (!due_date) {
+            if (!due_date_iso) {
                 showNotification('Erro', 'Por favor, selecione uma data de vencimento.', 'error');
                 return;
             }
@@ -1406,11 +1514,12 @@
             const taskData = {
                 title,
                 description: description || null,
-                due_date,
+                due_date: due_date_iso,
                 priority,
                 status,
                 category_id,
-                reminder_minutes
+                reminder_minutes,
+                all_day: isAllDay
             };
 
             console.log('Dados preparados para envio:', taskData);
@@ -1493,15 +1602,28 @@
 
             // Format date
             const dueDate = new Date(task.due_date);
-            const formattedDate = dueDate.toLocaleString('pt-BR', {
-                weekday: 'long',
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                timeZone: 'America/Sao_Paulo'
-            });
+            let formattedDate;
+            if (task.all_day) {
+                formattedDate = dueDate.toLocaleDateString('pt-BR', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    timeZone: 'UTC' // Mostrar a data como está
+                });
+                taskDetailsDate.innerHTML = formattedDate + ' <span class="text-xs text-gray-500">(Dia inteiro)</span>';
+            } else {
+                formattedDate = dueDate.toLocaleString('pt-BR', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'America/Sao_Paulo'
+                });
+                taskDetailsDate.textContent = formattedDate;
+            }
 
             // Get category
             const category = categories.find(cat => cat.id === task.category_id);
@@ -1520,7 +1642,6 @@
 
             taskDetailsPriority.textContent = getPriorityText(task.priority);
             taskDetailsStatus.textContent = getStatusText(task.status);
-            taskDetailsDate.textContent = formattedDate;
             taskDetailsDescription.textContent = task.description || 'Nenhuma descrição fornecida.';
 
             if (task.reminder) {

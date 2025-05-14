@@ -486,6 +486,36 @@
                         </div>
 
                         <div class="mb-4">
+                            <label for="venda-payment-method" class="block text-sm font-medium text-gray-700">Forma de Pagamento *</label>
+                            <select id="venda-payment-method"
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                required>
+                                <option value="">Selecione...</option>
+                                <option value="dinheiro">Dinheiro</option>
+                                <option value="cartao_credito">Cartão de Crédito</option>
+                                <option value="cartao_debito">Cartão de Débito</option>
+                                <option value="pix">PIX</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                        </div>
+
+                        <!-- Campos de Valor Recebido e Troco - Aparecem condicionalmente -->
+                        <div id="cash-payment-fields" class="hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div>
+                                    <label for="venda-amount-received" class="block text-sm font-medium text-gray-700">Valor Recebido</label>
+                                    <input type="number" id="venda-amount-received" step="0.01" min="0"
+                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                </div>
+                                <div>
+                                    <label for="venda-change-given" class="block text-sm font-medium text-gray-700">Troco</label>
+                                    <input type="text" id="venda-change-given" readonly
+                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 bg-gray-100 focus:outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
                             <label for="venda-observacoes"
                                 class="block text-sm font-medium text-gray-700">Observações</label>
                             <textarea id="venda-observacoes" rows="2"
@@ -503,6 +533,44 @@
                             </button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Warning Modal -->
+    <div id="stock-warning-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <i class="fas fa-exclamation-triangle text-red-600"></i>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="stock-warning-modal-title">
+                                Estoque Insuficiente
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    Não há estoque suficiente para um ou mais produtos solicitados:
+                                </p>
+                                <ul id="stock-warning-details-list" class="mt-2 list-disc list-inside text-sm text-gray-500">
+                                    <!-- Detalhes dos produtos virão aqui -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" id="close-stock-warning-modal"
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Entendido
+                    </button>
                 </div>
             </div>
         </div>
@@ -785,6 +853,10 @@
             const minutes = now.getMinutes().toString().padStart(2, '0');
             const localFormattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
             document.getElementById('venda-data').value = localFormattedDateTime;
+            document.getElementById('venda-payment-method').value = '';
+            document.getElementById('venda-amount-received').value = '';
+            document.getElementById('venda-change-given').value = 'R$ 0,00';
+            document.getElementById('cash-payment-fields').classList.add('hidden');
 
             openModal('modal-venda');
         }
@@ -831,7 +903,9 @@
                         produtos.forEach(produto => {
                             const option = document.createElement('option');
                             option.value = produto.id;
-                            option.textContent = produto.name;
+                            // Truncar o nome do produto se for muito longo
+                            const maxLength = 30; // Defina o comprimento máximo desejado
+                            option.textContent = produto.name.length > maxLength ? produto.name.substring(0, maxLength) + '...' : produto.name;
                             if (produto.id.toString() === item.produto.toString()) {
                                 option.selected = true;
                             }
@@ -848,12 +922,13 @@
                 });
 
             // Atualiza o total quando houver mudanças
-            const inputs = row.querySelectorAll('input');
+            const inputs = row.querySelectorAll('input[type="number"], select');
             inputs.forEach(input => {
-                input.addEventListener('input', calculateTotal);
+                input.addEventListener('input', calculateTotalAndChange);
+                input.addEventListener('change', calculateTotalAndChange);
             });
 
-            calculateTotal();
+            calculateTotalAndChange();
         }
 
 
@@ -861,22 +936,45 @@
         function removeItemRow(itemId) {
             const row = document.getElementById(`item-${itemId}`);
             if (row) row.remove();
-            calculateTotal();
+            calculateTotalAndChange();
         }
 
-        // Calculate total value of sale
-        function calculateTotal() {
+        // Calculate total value of sale and change
+        function calculateTotalAndChange() {
             let total = 0;
-            const items = document.getElementById('venda-itens-container').children;
+            const itemsContainer = document.getElementById('venda-itens-container');
+            if (!itemsContainer) return;
+            const items = itemsContainer.children;
 
             for (let i = 0; i < items.length; i++) {
                 const itemId = items[i].id.replace('item-', '');
-                const quantidade = parseFloat(document.getElementById(`item-quantidade-${itemId}`).value) || 0;
-                const valor = parseFloat(document.getElementById(`item-valor-${itemId}`).value) || 0;
+                const quantidadeInput = document.getElementById(`item-quantidade-${itemId}`);
+                const valorInput = document.getElementById(`item-valor-${itemId}`);
+                
+                const quantidade = parseFloat(quantidadeInput ? quantidadeInput.value : 0) || 0;
+                const valor = parseFloat(valorInput ? valorInput.value : 0) || 0;
                 total += quantidade * valor;
             }
 
-            document.getElementById('venda-valor').value = total.toFixed(2);
+            const totalVendaInput = document.getElementById('venda-valor');
+            if (totalVendaInput) totalVendaInput.value = total.toFixed(2);
+
+            // Calcular Troco
+            const paymentMethod = document.getElementById('venda-payment-method').value;
+            const amountReceivedInput = document.getElementById('venda-amount-received');
+            const changeGivenInput = document.getElementById('venda-change-given');
+
+            if (paymentMethod === 'dinheiro' && amountReceivedInput && changeGivenInput) {
+                const amountReceived = parseFloat(amountReceivedInput.value) || 0;
+                if (amountReceived >= total) {
+                    const change = amountReceived - total;
+                    changeGivenInput.value = `R$ ${change.toFixed(2).replace('.', ',')}`;
+                } else {
+                    changeGivenInput.value = 'R$ 0,00'; // Ou uma mensagem tipo "Valor insuficiente"
+                }
+            } else if (changeGivenInput) {
+                changeGivenInput.value = 'R$ 0,00';
+            }
         }
 
         // Edit sale - Versão integrada com API
@@ -908,6 +1006,27 @@
                 document.getElementById('venda-valor').value = venda.total_amount;
                 document.getElementById('venda-status').value = venda.status;
                 document.getElementById('venda-observacoes').value = venda.observations || '';
+                document.getElementById('venda-payment-method').value = venda.payment_method || '';
+
+                // Mostrar/ocultar campos de troco e preenchê-los se aplicável
+                const paymentMethod = venda.payment_method;
+                const cashFields = document.getElementById('cash-payment-fields');
+                const amountReceivedInput = document.getElementById('venda-amount-received');
+                const changeGivenInput = document.getElementById('venda-change-given');
+
+                if (paymentMethod === 'dinheiro') {
+                    cashFields.classList.remove('hidden');
+                    amountReceivedInput.value = venda.amount_received || '';
+                    if (venda.change_given !== null && venda.change_given !== undefined) {
+                        changeGivenInput.value = `R$ ${parseFloat(venda.change_given).toFixed(2).replace('.', ',')}`;
+                    } else {
+                        changeGivenInput.value = 'R$ 0,00';
+                    }
+                } else {
+                    cashFields.classList.add('hidden');
+                    amountReceivedInput.value = '';
+                    changeGivenInput.value = 'R$ 0,00';
+                }
 
                 // Canal específico
                 document.getElementById('venda-canal').value = venda.channel;
@@ -971,9 +1090,20 @@
                 channel: document.getElementById('venda-canal').value,
                 total: parseFloat(document.getElementById('venda-valor').value),
                 order_date: document.getElementById('venda-data').value,
+                payment_method: document.getElementById('venda-payment-method').value,
                 items: [],
                 channelData: {} // ← INICIALIZE O OBJETO AQUI!
             };
+
+            // Adicionar valor recebido e troco se a forma de pagamento for dinheiro
+            if (formData.payment_method === 'dinheiro') {
+                formData.amount_received = parseFloat(document.getElementById('venda-amount-received').value) || 0;
+                const changeGivenText = document.getElementById('venda-change-given').value;
+                formData.change_given = parseFloat(changeGivenText.replace('R$ ', '').replace(',', '.')) || 0;
+            } else {
+                formData.amount_received = null;
+                formData.change_given = null;
+            }
 
             // Coletar dados do canal
             if (formData.channel === 'whatsapp') {
@@ -1013,7 +1143,33 @@
 
             } catch (error) {
                 console.error('Erro:', error);
-                mostrarMensagem(error.message || 'Erro ao processar venda', 'error');
+                let errorMessage = 'Erro ao processar venda';
+                let stockErrorDetails = null;
+
+                try {
+                    const errorData = JSON.parse(error.message); 
+                    if (errorData.error) {
+                        errorMessage = errorData.error;
+                        if (errorData.error === "Estoque insuficiente" && errorData.details && Array.isArray(errorData.details)) {
+                            stockErrorDetails = errorData.details;
+                        } else if (errorData.details && Array.isArray(errorData.details)) {
+                             errorMessage += '\n';
+                             errorData.details.forEach(det => {
+                                 errorMessage += `\n- ${det.product_name || 'Produto desconhecido'}: Pedido ${det.requested}, Disponível ${det.available}`;
+                             });
+                        }
+                    }
+                } catch (e) {
+                    if (error.message) {
+                        errorMessage = error.message;
+                    }
+                }
+
+                if (stockErrorDetails) {
+                    openStockWarningModal(stockErrorDetails);
+                } else {
+                    mostrarMensagem(errorMessage, 'error');
+                }
             }
         });
 
@@ -1029,11 +1185,15 @@
         // Event listeners for modals
         document.getElementById('close-modal').addEventListener('click', () => closeModal('modal-venda'));
         document.getElementById('cancel-modal').addEventListener('click', () => closeModal('modal-venda'));
+        document.getElementById('close-stock-warning-modal').addEventListener('click', () => closeModal('stock-warning-modal'));
 
         // Close modals when clicking outside
         window.addEventListener('click', (event) => {
             if (event.target === document.getElementById('modal-venda')) {
                 closeModal('modal-venda');
+            }
+            if (event.target === document.getElementById('stock-warning-modal')) {
+                closeModal('stock-warning-modal');
             }
         });
 
@@ -1095,6 +1255,46 @@
                 }
             });
         });
+
+        function openStockWarningModal(details) {
+            const listElement = document.getElementById('stock-warning-details-list');
+            listElement.innerHTML = ''; // Limpar lista anterior
+
+            if (details && Array.isArray(details)) {
+                details.forEach(item => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${item.product_name || 'Produto desconhecido'} - Pedido: ${item.requested}, Disponível: ${item.available}`;
+                    listElement.appendChild(listItem);
+                });
+            }
+            openModal('stock-warning-modal');
+        }
+
+        document.getElementById('venda-payment-method').addEventListener('change', function() {
+            const cashFields = document.getElementById('cash-payment-fields');
+            if (this.value === 'dinheiro') {
+                cashFields.classList.remove('hidden');
+            } else {
+                cashFields.classList.add('hidden');
+                document.getElementById('venda-amount-received').value = ''; // Limpa se não for dinheiro
+                document.getElementById('venda-change-given').value = 'R$ 0,00';
+            }
+            calculateTotalAndChange(); // Recalcular troco ao mudar forma de pagamento
+        });
+
+        // Adicionar event listener para o campo de valor recebido para recalcular o troco
+        const amountReceivedInput = document.getElementById('venda-amount-received');
+        if (amountReceivedInput) {
+            amountReceivedInput.addEventListener('input', calculateTotalAndChange);
+        }
+
+        // Adicionar event listener para o campo de valor total da venda (caso seja editável ou mude por outros motivos)
+        const totalVendaInput = document.getElementById('venda-valor');
+        if (totalVendaInput) {
+            // Como o total é calculado a partir dos itens, o listener nos itens já cobre isso.
+            // Mas se o total pudesse ser alterado diretamente, um listener aqui seria útil.
+            // totalVendaInput.addEventListener('input', calculateTotalAndChange);
+        }
     </script>
 </body>
 
