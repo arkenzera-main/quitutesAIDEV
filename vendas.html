@@ -532,10 +532,16 @@
         document.addEventListener('DOMContentLoaded', function () {
             carregarVendas();
 
-            // Set default date/time
+            // Set default date/time for new sales
             const now = new Date();
-            const formattedDateTime = now.toISOString().slice(0, 16);
-            document.getElementById('venda-data').value = formattedDateTime;
+            // Formata para YYYY-MM-DDTHH:MM no fuso local do navegador
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const localFormattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            document.getElementById('venda-data').value = localFormattedDateTime;
         });
 
         async function carregarVendas() {
@@ -650,8 +656,14 @@
                 const row = document.createElement('tr');
                 row.className = 'hover:bg-gray-50';
 
-                // Format date
+                // DEBUG: Verificar valores de data
+                console.log('[VENDAS_RECENTES] ID:', venda.id, 'Original venda.order_date:', venda.order_date);
                 const date = new Date(venda.order_date || venda.data);
+                console.log('[VENDAS_RECENTES] ID:', venda.id, 'Objeto Date criado:', date.toString());
+                console.log('[VENDAS_RECENTES] ID:', venda.id, 'Objeto Date UTC string:', date.toUTCString());
+                // FIM DEBUG
+
+                // Format date
                 const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                 // Format channel
@@ -764,10 +776,15 @@
             // Add one empty item row
             addItemRow();
 
-            // Set default date/time
+            // Set default date/time for new sales in modal
             const now = new Date();
-            const formattedDateTime = now.toISOString().slice(0, 16);
-            document.getElementById('venda-data').value = formattedDateTime;
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const day = now.getDate().toString().padStart(2, '0');
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const localFormattedDateTime = `${year}-${month}-${day}T${hours}:${minutes}`;
+            document.getElementById('venda-data').value = localFormattedDateTime;
 
             openModal('modal-venda');
         }

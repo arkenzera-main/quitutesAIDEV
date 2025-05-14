@@ -10,7 +10,8 @@ const dbConfig = {
     host: '127.0.0.1',
     user: 'root',
     password: '',
-    database: 'quitutes_ai'
+    database: 'quitutes_ai',
+    timezone: 'Z' // Configura a conexão para usar UTC
 };
 
 // Habilita o CORS para permitir requisições de outros domínios
@@ -1597,37 +1598,24 @@ app.get('/api/sales', async (req, res) => {
 
         const sales = orders.map(order => {
             let isoOrderDate = null;
-            try {
-                if (order.order_date) {
-                    let year, month, day, hours, minutes, seconds;
-                    if (order.order_date instanceof Date && !isNaN(order.order_date.getTime())) {
-                        const dt = order.order_date;
-                        year = dt.getFullYear();
-                        month = dt.getMonth();
-                        day = dt.getDate();
-                        hours = dt.getHours();
-                        minutes = dt.getMinutes();
-                        seconds = dt.getSeconds();
-                    } else {
-                        const dateStr = String(order.order_date);
-                        const parts = dateStr.match(/^(\\d{4})-(\\d{2})-(\\d{2}) (\\d{2}):(\\d{2}):(\\d{2})/);
-                        if (parts) {
-                            year = parseInt(parts[1], 10);
-                            month = parseInt(parts[2], 10) - 1;
-                            day = parseInt(parts[3], 10);
-                            hours = parseInt(parts[4], 10);
-                            minutes = parseInt(parts[5], 10);
-                            seconds = parseInt(parts[6], 10);
+            if (order.order_date) { // Garante que order_date existe
+                if (order.order_date instanceof Date && !isNaN(order.order_date.getTime())) {
+                    isoOrderDate = order.order_date.toISOString(); // Converte Date object para ISO string UTC
+                } else {
+                    // Se for uma string (fallback, menos ideal para TIMESTAMPs diretos do DB)
+                    try {
+                        const parsedDate = new Date(order.order_date);
+                        if (!isNaN(parsedDate.getTime())) {
+                            isoOrderDate = parsedDate.toISOString();
                         } else {
-                            console.error(`[SALES_GET_DATE_PARSE_ERROR] Formato de order_date inesperado para order ID ${order.id}: ${dateStr}`);
+                            console.warn(`[SALES_GET_DATE_INVALID_STRING] order_date string não pôde ser parseada para data válida: ${order.order_date} para order ID ${order.id}`);
+                            isoOrderDate = order.order_date; // Mantém a string original se não puder parsear
                         }
-                    }
-                    if (year !== undefined) {
-                        isoOrderDate = new Date(Date.UTC(year, month, day, hours, minutes, seconds)).toISOString();
+                    } catch (e) {
+                        console.error(`[SALES_GET_DATE_STRING_CONVERT_ERROR] Erro ao tentar converter order_date string para order ID ${order.id}:`, e);
+                        isoOrderDate = order.order_date; // Mantém a string original em caso de erro
                     }
                 }
-            } catch (e) {
-                console.error(`[SALES_GET_DATE_CONVERT_ERROR] Erro processando order_date para order ID ${order.id}, data: '${order.order_date}':`, e);
             }
 
             return {
@@ -1637,7 +1625,7 @@ app.get('/api/sales', async (req, res) => {
                     quantity: item.quantity,
                     valor: item.unit_price
                 })),
-                order_date: isoOrderDate
+                order_date: isoOrderDate // Envia a string ISO 8601 UTC
             };
         });
 
