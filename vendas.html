@@ -446,12 +446,6 @@
                                     required>
                             </div>
                             <div>
-                                <label for="venda-cpf" class="block text-sm font-medium text-gray-700">CPF do Cliente</label>
-                                <input type="text" id="venda-cpf"
-                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                                    placeholder="000.000.000-00">
-                            </div>
-                            <div>
                                 <label for="venda-data" class="block text-sm font-medium text-gray-700">Data *</label>
                                 <input type="datetime-local" id="venda-data"
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
@@ -862,7 +856,7 @@
             document.getElementById('form-venda').reset();
             document.getElementById('venda-id').value = '';
             document.getElementById('venda-canal').value = channel;
-            document.getElementById('venda-cpf').value = ''; // Limpar CPF
+            // document.getElementById('venda-cpf').value = ''; // Limpar CPF - REMOVIDO
 
             // Hide all channel info sections
             document.getElementById('whatsapp-info').classList.add('hidden');
@@ -1031,7 +1025,7 @@
                 // Preencher campos básicos
                 document.getElementById('venda-id').value = venda.id;
                 document.getElementById('venda-cliente').value = venda.customer_name || venda.customer;
-                document.getElementById('venda-cpf').value = venda.cpf || ''; // Preencher CPF
+                // document.getElementById('venda-cpf').value = venda.cpf || ''; // Preencher CPF - REMOVIDO
                 
                 // Corrigir formatação de data para input datetime-local
                 if (venda.order_date) { // venda.order_date é string UTC
@@ -1139,10 +1133,10 @@
                 channelData: {} // ← INICIALIZE O OBJETO AQUI!
             };
 
-            const cpfValue = document.getElementById('venda-cpf').value;
-            if (cpfValue) {
-                formData.cpf = cpfValue;
-            }
+            // const cpfValue = document.getElementById('venda-cpf').value; // REMOVIDO
+            // if (cpfValue) { // REMOVIDO
+            //     formData.cpf = cpfValue; // REMOVIDO
+            // } // REMOVIDO
 
             // Adicionar valor recebido e troco se a forma de pagamento for dinheiro
             if (formData.payment_method === 'dinheiro') {
@@ -1436,7 +1430,6 @@
                         <div><strong>Nº Pedido:</strong> <span class="text-gray-700">${venda.order_number || 'N/A'}</span></div>
                         <div><strong>Data:</strong> <span class="text-gray-700">${orderDate}</span></div>
                         <div><strong>Cliente:</strong> <span class="text-gray-700">${venda.customer_name || 'Não informado'}</span></div>
-                        <div><strong>CPF:</strong> <span class="text-gray-700">${venda.cpf || 'Não informado'}</span></div>
                         <div><strong>Canal:</strong> <span class="text-gray-700">${channelInfo}</span></div>
                         <div><strong>Status:</strong> <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusInfo.color}">${statusInfo.text}</span></div>
                         <div><strong>Forma de Pagamento:</strong> <span class="text-gray-700">${paymentMethodText}</span></div>
@@ -1600,7 +1593,7 @@
                                 <p><strong>Nº Pedido:</strong> ${venda.order_number || 'N/A'}</p>
                                 <p><strong>Data:</strong> ${orderDate}</p>
                                 <p><strong>Cliente:</strong> ${venda.customer_name || 'Não informado'}</p>
-                                ${venda.cpf ? `<p><strong>CPF:</strong> ${venda.cpf}</p>` : ''}
+                                ${''}
                             </div>
                             <hr>
                             <p><strong>Itens:</strong></p>
