@@ -830,6 +830,9 @@
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <button onclick="imprimirComprovante(${venda.id})" class="text-gray-600 hover:text-gray-900 mr-3" title="Imprimir Comprovante">
+                    <i class="fas fa-print"></i>
+                </button>
                 <button onclick="abrirModalDetalhesVenda(${venda.id})" class="text-blue-600 hover:text-blue-900 mr-3" title="Ver Detalhes">
                     <i class="fas fa-eye"></i>
                 </button>
@@ -1445,6 +1448,168 @@
             } catch (error) {
                 console.error("Erro ao abrir modal de detalhes:", error);
                 modalContent.innerHTML = `<p class="text-center text-red-500">${error.message || 'Ocorreu um erro ao carregar os detalhes.'}</p>`;
+            }
+        }
+
+        async function imprimirComprovante(id) {
+            try {
+                const response = await fetch(`/api/sales/${id}`);
+                if (!response.ok) {
+                    throw new Error('Falha ao carregar dados da venda para impressão.');
+                }
+                const venda = await response.json();
+
+                const nomeLoja = "Quitutes d'Line"; 
+                const enderecoLoja = "Rua Gilma, 235 - Ferraz de Vasconcelos";
+                const contatoLoja = "(11) 98315-6287 | @quitutesdline";
+
+                let itensHtml = '';
+                if (venda.items && venda.items.length > 0) {
+                    venda.items.forEach(item => {
+                        const valorUnitario = parseFloat(item.valor || 0);
+                        const quantidade = parseInt(item.quantity || 0);
+                        const subtotal = valorUnitario * quantidade;
+                        itensHtml += `
+                            <tr>
+                                <td style="text-align: left; padding-right: 10px;">${item.product_name || 'Produto desconhecido'}</td>
+                                <td style="text-align: right;">${quantidade}</td>
+                                <td style="text-align: right;">${valorUnitario.toFixed(2).replace('.', ',')}</td>
+                                <td style="text-align: right;">${subtotal.toFixed(2).replace('.', ',')}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                const orderDate = venda.order_date ? new Date(venda.order_date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const totalAmount = parseFloat(venda.total_amount || 0).toFixed(2).replace('.', ',');
+                const amountReceived = parseFloat(venda.amount_received || 0);
+                const changeGiven = parseFloat(venda.change_given || 0);
+
+                const paymentMethodMap = {
+                    'dinheiro': 'Dinheiro',
+                    'cartao_credito': 'Cartão de Crédito',
+                    'cartao_debito': 'Cartão de Débito',
+                    'pix': 'PIX',
+                    'outro': 'Outro'
+                };
+                const paymentMethodText = paymentMethodMap[venda.payment_method] || venda.payment_method || 'Não informado';
+
+                let pagamentoHtml = `<strong>Pagamento:</strong> ${paymentMethodText}<br>`;
+                if (venda.payment_method === 'dinheiro') {
+                    pagamentoHtml += `<strong>Valor Recebido:</strong> R$ ${amountReceived.toFixed(2).replace('.', ',')}<br>`;
+                    pagamentoHtml += `<strong>Troco:</strong> R$ ${changeGiven.toFixed(2).replace('.', ',')}<br>`;
+                }
+
+                const printWindow = window.open('', '_blank', 'height=600,width=800');
+                printWindow.document.write(`
+                    <html>
+                        <head>
+                            <title>Comprovante de Venda</title>
+                            <style>
+                                body {
+                                    font-family: 'Courier New', Courier, monospace; /* Fonte comum em impressoras térmicas */
+                                    width: 280px; /* Largura aproximada para cupom 80mm, ajuste conforme necessário */
+                                    margin: 0 auto;
+                                    padding: 10px;
+                                    font-size: 10pt; /* Tamanho de fonte base */
+                                }
+                                .header, .footer {
+                                    text-align: center;
+                                    margin-bottom: 10px;
+                                }
+                                .header h1 { margin: 0; font-size: 14pt;}
+                                .header p { margin: 2px 0; font-size: 8pt; }
+                                .info-section p, .payment-section p {
+                                    margin: 3px 0;
+                                }
+                                table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    margin-top: 5px;
+                                    margin-bottom: 5px;
+                                    font-size: 9pt;
+                                }
+                                th, td {
+                                    padding: 2px;
+                                    border-bottom: 1px dashed #ccc; /* Linha pontilhada entre itens */
+                                }
+                                th {
+                                    text-align: left;
+                                    border-bottom: 1px solid #000;
+                                }
+                                .total-section {
+                                    text-align: right;
+                                    margin-top: 10px;
+                                    font-size: 11pt;
+                                }
+                                .footer p { margin: 2px 0; font-size: 8pt; }
+
+                                @media print {
+                                    body {
+                                        width: 100%; /* Usa a largura da impressora */
+                                        margin: 0;
+                                        padding: 5px;
+                                        color: #000;
+                                        background-color: #fff;
+                                    }
+                                    /* Pode adicionar mais estilos para @media print aqui se necessário */
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h1>${nomeLoja}</h1>
+                                <p>${enderecoLoja}</p>
+                                <p>${contatoLoja}</p>
+                            </div>
+                            <hr>
+                            <div class="info-section">
+                                <p><strong>Comprovante de Venda</strong></p>
+                                <p><strong>Nº Pedido:</strong> ${venda.order_number || 'N/A'}</p>
+                                <p><strong>Data:</strong> ${orderDate}</p>
+                                <p><strong>Cliente:</strong> ${venda.customer_name || 'Não informado'}</p>
+                            </div>
+                            <hr>
+                            <p><strong>Itens:</strong></p>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Produto</th>
+                                        <th style="text-align: right;">Qtd</th>
+                                        <th style="text-align: right;">Un.</th>
+                                        <th style="text-align: right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itensHtml}
+                                </tbody>
+                            </table>
+                            <hr>
+                            <div class="total-section">
+                                <strong>VALOR TOTAL: R$ ${totalAmount}</strong>
+                            </div>
+                            <hr>
+                            <div class="payment-section">
+                                ${pagamentoHtml}
+                            </div>
+                            <hr>
+                            <div class="footer">
+                                <p>Obrigado pela preferência!</p>
+                                <!-- Você pode adicionar um QR Code aqui se precisar (requer biblioteca JS) -->
+                            </div>
+                        </body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.focus();
+                setTimeout(() => { // Timeout para garantir que o conteúdo carregue antes de imprimir
+                    printWindow.print();
+                    // printWindow.close(); // Comentado para teste
+                }, 250);
+
+            } catch (error) {
+                console.error("Erro ao gerar comprovante:", error);
+                mostrarMensagem(error.message || 'Ocorreu um erro ao tentar imprimir o comprovante.', 'error');
             }
         }
     </script>
