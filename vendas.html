@@ -538,6 +538,35 @@
         </div>
     </div>
 
+    <!-- Details Modal -->
+    <div id="detalhes-venda-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-semibold text-gray-900" id="detalhes-modal-title">Detalhes da Venda</h3>
+                        <button type="button" id="close-detalhes-modal" class="text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="detalhes-venda-conteudo" class="space-y-4">
+                        <!-- Conteúdo dinâmico aqui -->
+                        <p class="text-center text-gray-500">Carregando detalhes...</p>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="button" id="fechar-detalhes-modal-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Stock Warning Modal -->
     <div id="stock-warning-modal" class="fixed inset-0 z-50 hidden overflow-y-auto">
         <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -801,7 +830,10 @@
                 </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button onclick="editarVenda(${venda.id})" class="text-indigo-600 hover:text-indigo-900 mr-3">
+                <button onclick="abrirModalDetalhesVenda(${venda.id})" class="text-blue-600 hover:text-blue-900 mr-3" title="Ver Detalhes">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button onclick="editarVenda(${venda.id})" class="text-indigo-600 hover:text-indigo-900 mr-3" title="Editar">
                     <i class="fas fa-edit"></i>
                 </button>
                 <button onclick="excluirVenda(${venda.id})" class="text-red-600 hover:text-red-900">
@@ -1186,6 +1218,8 @@
         document.getElementById('close-modal').addEventListener('click', () => closeModal('modal-venda'));
         document.getElementById('cancel-modal').addEventListener('click', () => closeModal('modal-venda'));
         document.getElementById('close-stock-warning-modal').addEventListener('click', () => closeModal('stock-warning-modal'));
+        document.getElementById('close-detalhes-modal').addEventListener('click', () => closeModal('detalhes-venda-modal'));
+        document.getElementById('fechar-detalhes-modal-btn').addEventListener('click', () => closeModal('detalhes-venda-modal'));
 
         // Close modals when clicking outside
         window.addEventListener('click', (event) => {
@@ -1194,6 +1228,9 @@
             }
             if (event.target === document.getElementById('stock-warning-modal')) {
                 closeModal('stock-warning-modal');
+            }
+            if (event.target === document.getElementById('detalhes-venda-modal')) {
+                closeModal('detalhes-venda-modal');
             }
         });
 
@@ -1294,6 +1331,121 @@
             // Como o total é calculado a partir dos itens, o listener nos itens já cobre isso.
             // Mas se o total pudesse ser alterado diretamente, um listener aqui seria útil.
             // totalVendaInput.addEventListener('input', calculateTotalAndChange);
+        }
+
+        async function abrirModalDetalhesVenda(id) {
+            const modalContent = document.getElementById('detalhes-venda-conteudo');
+            modalContent.innerHTML = '<p class="text-center text-gray-500">Carregando detalhes...</p>';
+            openModal('detalhes-venda-modal');
+
+            try {
+                const response = await fetch(`/api/sales/${id}`);
+                if (!response.ok) {
+                    throw new Error('Falha ao carregar detalhes da venda.');
+                }
+                const venda = await response.json();
+
+                let itemsHtml = '<p>Nenhum item encontrado.</p>';
+                if (venda.items && venda.items.length > 0) {
+                    itemsHtml = `
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Qtd</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Vlr. Unit.</th>
+                                    <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                ${venda.items.map(item => {
+                                    const valorUnitario = parseFloat(item.valor || 0);
+                                    const quantidade = parseInt(item.quantity || 0);
+                                    const subtotal = valorUnitario * quantidade;
+                                    return `
+                                        <tr>
+                                            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-700">${item.product_name || venda.products?.find(p => p.id == item.product)?.name || item.product || 'Produto desconhecido'}</td>
+                                            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 text-right">${quantidade}</td>
+                                            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 text-right">R$ ${valorUnitario.toFixed(2).replace('.', ',')}</td>
+                                            <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500 text-right">R$ ${subtotal.toFixed(2).replace('.', ',')}</td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+
+                const orderDate = venda.order_date ? new Date(venda.order_date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A';
+                const totalAmount = parseFloat(venda.total_amount || 0).toFixed(2).replace('.', ',');
+                const amountReceived = parseFloat(venda.amount_received || 0).toFixed(2).replace('.', ',');
+                const changeGiven = parseFloat(venda.change_given || 0).toFixed(2).replace('.', ',');
+
+                const statusMap = {
+                    'pending': { text: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
+                    'preparing': { text: 'Em Preparo', color: 'bg-blue-100 text-blue-800' },
+                    'on_delivery': { text: 'Pronto', color: 'bg-indigo-100 text-indigo-800' },
+                    'delivered': { text: 'Entregue', color: 'bg-green-100 text-green-800' }
+                };
+                const statusInfo = statusMap[venda.status] || { text: venda.status || 'Desconhecido', color: 'bg-gray-100 text-gray-800' };
+
+
+                let channelInfo = '';
+                switch (venda.channel) {
+                    case 'whatsapp':
+                        channelInfo = `WhatsApp (${venda.whatsapp_number || 'Não informado'})`;
+                        break;
+                    case 'ifood':
+                        channelInfo = `iFood (Pedido: ${venda.ifood_order || 'Não informado'})`;
+                        break;
+                    case 'balcao':
+                        channelInfo = 'Balcão';
+                        break;
+                    default:
+                        channelInfo = venda.channel || 'Não informado';
+                }
+                
+                const paymentMethodMap = {
+                    'dinheiro': 'Dinheiro',
+                    'cartao_credito': 'Cartão de Crédito',
+                    'cartao_debito': 'Cartão de Débito',
+                    'pix': 'PIX',
+                    'outro': 'Outro'
+                };
+                const paymentMethodText = paymentMethodMap[venda.payment_method] || venda.payment_method || 'Não informado';
+
+                modalContent.innerHTML = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                        <div><strong>Nº Pedido:</strong> <span class="text-gray-700">${venda.order_number || 'N/A'}</span></div>
+                        <div><strong>Data:</strong> <span class="text-gray-700">${orderDate}</span></div>
+                        <div><strong>Cliente:</strong> <span class="text-gray-700">${venda.customer_name || 'Não informado'}</span></div>
+                        <div><strong>Canal:</strong> <span class="text-gray-700">${channelInfo}</span></div>
+                        <div><strong>Status:</strong> <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusInfo.color}">${statusInfo.text}</span></div>
+                        <div><strong>Forma de Pagamento:</strong> <span class="text-gray-700">${paymentMethodText}</span></div>
+                        ${venda.payment_method === 'dinheiro' ? `
+                            <div><strong>Valor Recebido:</strong> <span class="text-gray-700">R$ ${amountReceived}</span></div>
+                            <div><strong>Troco:</strong> <span class="text-gray-700">R$ ${changeGiven}</span></div>
+                        ` : ''}
+                    </div>
+                    <div class="mt-4">
+                        <h4 class="font-medium text-gray-800 mb-1">Itens:</h4>
+                        ${itemsHtml}
+                    </div>
+                    <div class="mt-3 text-right">
+                        <strong>Valor Total:</strong> <span class="text-lg font-semibold text-indigo-600">R$ ${totalAmount}</span>
+                    </div>
+                    ${venda.observations ? `
+                        <div class="mt-3">
+                            <h4 class="font-medium text-gray-800 mb-1">Observações:</h4>
+                            <p class="text-gray-700 bg-gray-50 p-2 rounded">${venda.observations}</p>
+                        </div>
+                    ` : ''}
+                `;
+
+            } catch (error) {
+                console.error("Erro ao abrir modal de detalhes:", error);
+                modalContent.innerHTML = `<p class="text-center text-red-500">${error.message || 'Ocorreu um erro ao carregar os detalhes.'}</p>`;
+            }
         }
     </script>
 </body>

@@ -1851,7 +1851,10 @@ app.post('/api/sales', async (req, res) => {
             status,
             observations,
             order_date: orderDateString, // String do input datetime-local
-            channelData
+            channelData,
+            payment_method,      // Adicionado para clareza na desestruturação
+            amount_received,   // Adicionado para clareza
+            change_given         // Adicionado para clareza
         } = req.body;
 
         // Validação básica
@@ -1973,8 +1976,11 @@ app.post('/api/sales', async (req, res) => {
                 order_date,
                 whatsapp_number,
                 ifood_order,
-                attendant
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                attendant,
+                payment_method,
+                amount_received,
+                change_given
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
                 orderNumber,
                 customer_id,
@@ -1985,7 +1991,10 @@ app.post('/api/sales', async (req, res) => {
                 order_date_utc, // Data UTC
                 channelData?.whatsapp || null,
                 channelData?.ifood || null,
-                channelData?.attendant || null
+                channelData?.attendant || null,
+                payment_method || null, // Salvar payment_method
+                (payment_method === 'dinheiro' && amount_received != null) ? parseFloat(amount_received) : null, // Salvar amount_received
+                (payment_method === 'dinheiro' && change_given != null) ? parseFloat(change_given) : null // Salvar change_given
             ]
         );
         const orderId = orderResult.insertId;
@@ -2068,11 +2077,13 @@ app.get('/api/sales/:id', async (req, res) => {
 
         const [items] = await connection.query(`
             SELECT 
-                product_id as product,  -- Garantir o alias correto
-                quantity,
-                unit_price as valor
-            FROM order_items
-            WHERE order_id = ?
+                oi.product_id as product,
+                p.name as product_name, 
+                oi.quantity,
+                oi.unit_price as valor
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = ?
         `, [req.params.id]);
 
         connection.release();
@@ -2102,7 +2113,10 @@ app.put('/api/sales/:id', async (req, res) => {
             observations = '',
             customer: customerName = null,
             order_date: orderDateString, // String do input datetime-local
-            items: updatedItems = []
+            items: updatedItems = [],
+            payment_method, 
+            amount_received,
+            change_given
             // total_amount é omitido, será recalculado
         } = req.body;
 
@@ -2178,8 +2192,15 @@ app.put('/api/sales/:id', async (req, res) => {
         }
 
         // 3. Atualizar a tabela 'orders'
-        let updateOrderQuery = 'UPDATE orders SET status = ?, observations = ?, total_amount = ?';
-        const orderQueryParams = [dbStatus, observations, newTotalAmount];
+        let updateOrderQuery = 'UPDATE orders SET status = ?, observations = ?, total_amount = ?, payment_method = ?, amount_received = ?, change_given = ?';
+        const orderQueryParams = [
+            dbStatus, 
+            observations, 
+            newTotalAmount,
+            payment_method || null,
+            (payment_method === 'dinheiro' && amount_received != null) ? parseFloat(amount_received) : null,
+            (payment_method === 'dinheiro' && change_given != null) ? parseFloat(change_given) : null
+        ];
 
         if (order_date_utc_for_update) { // Usa a data UTC convertida
             updateOrderQuery += ', order_date = ?';
