@@ -398,6 +398,7 @@
                     <form id="form-venda">
                         <input type="hidden" id="venda-id">
                         <input type="hidden" id="venda-canal">
+                        <input type="hidden" id="venda-cpf">
 
                         <!-- Channel Specific Info -->
                         <div id="whatsapp-info" class="hidden mb-4 p-4 bg-green-50 rounded-lg">
@@ -443,6 +444,12 @@
                                 <input type="text" id="venda-cliente"
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                                     required>
+                            </div>
+                            <div>
+                                <label for="venda-cpf" class="block text-sm font-medium text-gray-700">CPF do Cliente</label>
+                                <input type="text" id="venda-cpf"
+                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                    placeholder="000.000.000-00">
                             </div>
                             <div>
                                 <label for="venda-data" class="block text-sm font-medium text-gray-700">Data *</label>
@@ -855,6 +862,7 @@
             document.getElementById('form-venda').reset();
             document.getElementById('venda-id').value = '';
             document.getElementById('venda-canal').value = channel;
+            document.getElementById('venda-cpf').value = ''; // Limpar CPF
 
             // Hide all channel info sections
             document.getElementById('whatsapp-info').classList.add('hidden');
@@ -1023,6 +1031,7 @@
                 // Preencher campos básicos
                 document.getElementById('venda-id').value = venda.id;
                 document.getElementById('venda-cliente').value = venda.customer_name || venda.customer;
+                document.getElementById('venda-cpf').value = venda.cpf || ''; // Preencher CPF
                 
                 // Corrigir formatação de data para input datetime-local
                 if (venda.order_date) { // venda.order_date é string UTC
@@ -1129,6 +1138,11 @@
                 items: [],
                 channelData: {} // ← INICIALIZE O OBJETO AQUI!
             };
+
+            const cpfValue = document.getElementById('venda-cpf').value;
+            if (cpfValue) {
+                formData.cpf = cpfValue;
+            }
 
             // Adicionar valor recebido e troco se a forma de pagamento for dinheiro
             if (formData.payment_method === 'dinheiro') {
@@ -1422,6 +1436,7 @@
                         <div><strong>Nº Pedido:</strong> <span class="text-gray-700">${venda.order_number || 'N/A'}</span></div>
                         <div><strong>Data:</strong> <span class="text-gray-700">${orderDate}</span></div>
                         <div><strong>Cliente:</strong> <span class="text-gray-700">${venda.customer_name || 'Não informado'}</span></div>
+                        <div><strong>CPF:</strong> <span class="text-gray-700">${venda.cpf || 'Não informado'}</span></div>
                         <div><strong>Canal:</strong> <span class="text-gray-700">${channelInfo}</span></div>
                         <div><strong>Status:</strong> <span class="px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusInfo.color}">${statusInfo.text}</span></div>
                         <div><strong>Forma de Pagamento:</strong> <span class="text-gray-700">${paymentMethodText}</span></div>
@@ -1462,6 +1477,7 @@
                 const nomeLoja = "Quitutes d'Line"; 
                 const enderecoLoja = "Rua Gilma, 235 - Ferraz de Vasconcelos";
                 const contatoLoja = "(11) 98315-6287 | @quitutesdline";
+                
 
                 let itensHtml = '';
                 if (venda.items && venda.items.length > 0) {
@@ -1539,10 +1555,26 @@
                                 }
                                 .total-section {
                                     text-align: right;
-                                    margin-top: 10px;
+                                    margin-top: 8px; /* Reduzido */
+                                    margin-bottom: 8px; /* Adicionado */
                                     font-size: 11pt;
                                 }
-                                .footer p { margin: 2px 0; font-size: 8pt; }
+                                .payment-section {
+                                     margin-top: 5px; /* Adicionado para separar do total */
+                                     margin-bottom: 5px; /* Adicionado para separar do footer */
+                                }
+                                .footer {
+                                    text-align: center;
+                                    margin-top: 8px; /* Reduzido */
+                                    margin-bottom: 0; /* Reduzido */
+                                    padding-top: 5px; /* Adicionado para separar do HR anterior */
+                                }
+                                .footer p { margin: 1px 0; font-size: 8pt; } /* Margem reduzida nos parágrafos do footer */
+                                hr {
+                                    border: none;
+                                    border-top: 1px dashed #555; /* Linha tracejada mais escura */
+                                    margin: 5px 0; /* Margem reduzida para HR */
+                                }
 
                                 @media print {
                                     body {
@@ -1568,6 +1600,7 @@
                                 <p><strong>Nº Pedido:</strong> ${venda.order_number || 'N/A'}</p>
                                 <p><strong>Data:</strong> ${orderDate}</p>
                                 <p><strong>Cliente:</strong> ${venda.customer_name || 'Não informado'}</p>
+                                ${venda.cpf ? `<p><strong>CPF:</strong> ${venda.cpf}</p>` : ''}
                             </div>
                             <hr>
                             <p><strong>Itens:</strong></p>
@@ -1595,6 +1628,7 @@
                             <hr>
                             <div class="footer">
                                 <p>Obrigado pela preferência!</p>
+                                <p>Cupom sem valor fiscal</p>
                                 <!-- Você pode adicionar um QR Code aqui se precisar (requer biblioteca JS) -->
                             </div>
                         </body>

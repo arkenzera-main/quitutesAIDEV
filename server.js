@@ -1854,7 +1854,8 @@ app.post('/api/sales', async (req, res) => {
             channelData,
             payment_method,      // Adicionado para clareza na desestruturação
             amount_received,   // Adicionado para clareza
-            change_given         // Adicionado para clareza
+            change_given,         // Adicionado para clareza
+            cpf                  // CPF do cliente
         } = req.body;
 
         // Validação básica
@@ -1956,13 +1957,28 @@ app.post('/api/sales', async (req, res) => {
         const orderNumber = `${prefix}-${currentYear}-${sequence.toString().padStart(4, '0')}`;
 
         // 3. Criar ou buscar cliente
-        const [customerResult] = await connection.query(
-            `INSERT INTO customers (name) VALUES (?) 
-             ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)`,
+        let customer_id;
+        const [existingCustomer] = await connection.query(
+            'SELECT id FROM customers WHERE name = ? LIMIT 1',
             [customer]
         );
-        const customer_id = customerResult.insertId || (await connection.query('SELECT id FROM customers WHERE name = ?', [customer]))[0][0].id;
 
+        if (existingCustomer.length > 0) {
+            customer_id = existingCustomer[0].id;
+            // Atualizar CPF se fornecido e diferente do existente (ou se não houver CPF)
+            if (cpf) {
+                await connection.query(
+                    'UPDATE customers SET cpf = ? WHERE id = ? AND (cpf IS NULL OR cpf != ?)',
+                    [cpf, customer_id, cpf]
+                );
+            }
+        } else {
+            const [customerResult] = await connection.query(
+                'INSERT INTO customers (name, cpf) VALUES (?, ?)',
+                [customer, cpf || null]
+            );
+            customer_id = customerResult.insertId;
+        }
 
         // 4. Inserir a ordem principal
         const [orderResult] = await connection.query(
@@ -2064,7 +2080,8 @@ app.get('/api/sales/:id', async (req, res) => {
             SELECT 
                 o.*, 
                 c.name as customer_name,
-                o.customer_id
+                o.customer_id,
+                c.cpf as cpf        // Adicionar cpf do cliente
             FROM orders o
             LEFT JOIN customers c ON o.customer_id = c.id
             WHERE o.id = ?
@@ -2116,7 +2133,8 @@ app.put('/api/sales/:id', async (req, res) => {
             items: updatedItems = [],
             payment_method, 
             amount_received,
-            change_given
+            change_given,
+            cpf // CPF do Cliente
             // total_amount é omitido, será recalculado
         } = req.body;
 
@@ -2152,8 +2170,8 @@ app.put('/api/sales/:id', async (req, res) => {
             // Tenta inserir ou atualizar o nome (ON DUPLICATE KEY UPDATE não faz nada se o nome for o mesmo)
             // O principal objetivo aqui é garantir que o cliente exista.
             await connection.query(
-                `INSERT INTO customers (name) VALUES (?) ON DUPLICATE KEY UPDATE name = VALUES(name)`,
-                [customerName]
+                `INSERT INTO customers (name, cpf) VALUES (?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), cpf = VALUES(cpf)`,
+                [customerName, cpf || null]
             );
             // Após garantir que o cliente existe, seleciona seu ID.
             const [customerRows] = await connection.query('SELECT id FROM customers WHERE name = ?', [customerName]);
